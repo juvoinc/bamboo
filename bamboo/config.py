@@ -16,7 +16,7 @@ class Config(MutableMapping):
         self._config.update(kwargs)
 
     def __iter__(self):
-        return self._config
+        return iter(self._config)
 
     def __len__(self):
         return len(self._config)
@@ -33,10 +33,7 @@ class Config(MutableMapping):
     @property
     def es(self):
         """Return elasticsearch connection instance."""
-        return Elasticsearch(
-            hosts=self['hosts'],
-            timeout=self['timeout']
-        )
+        return Elasticsearch(**self)
 
 
 config = Config()
