@@ -1,0 +1,8 @@
+*.pyc
+.idea/*
+.DS_Store
+.vscode/
+__pycache__
+.coverage
+.eggs/
+*.egg-info/
