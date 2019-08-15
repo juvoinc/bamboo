@@ -5,7 +5,10 @@ from elasticsearch import Elasticsearch
 
 
 class Config(MutableMapping):
+    """Configuration storage class."""
+
     def __init__(self):
+        """Init Config."""
         self.config_files = ('setup.cfg', 'tox.ini', '.bamboo')
         self._config = {}
 
@@ -29,6 +32,7 @@ class Config(MutableMapping):
 
     @property
     def es(self):
+        """Return elasticsearch connection instance."""
         return Elasticsearch(
             hosts=self['hosts'],
             timeout=self['timeout']
