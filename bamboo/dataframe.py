@@ -75,9 +75,9 @@ class ElasticDataFrame(OrmMixin):
             dict: Document source for a given ID
         """
         doc = es.get(index=self.index,
-                           id=id,
-                           doc_type='doc',
-                           _source=fields)
+                     id=id,
+                     doc_type='doc',
+                     _source=fields)
         return doc['_source']
 
     __call__ = get
