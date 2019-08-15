@@ -1,2 +1,2 @@
 # bamboo
-Pandas-like interface for Elasticsearch.
+Pandas-style interface for Elasticsearch.
