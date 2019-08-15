@@ -2,7 +2,7 @@ import pytest
 from elasticsearch.helpers import bulk
 
 from bamboo import ElasticDataFrame
-from bamboo.config import config, es
+from bamboo.config import config
 
 TEST_INDEX = 'bamboo-test-index-'
 
@@ -131,6 +131,7 @@ def df():
 def elasticsearch_index():
     template = 'test_template'
     config(hosts=['localhost'])
+    es = config.connection
     try:
         es.indices.put_template(name=template, body=TEMPLATE)
         bulk(es, TEST_DATA)

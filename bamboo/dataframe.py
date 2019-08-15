@@ -7,7 +7,7 @@ from elasticsearch.helpers import scan
 from .exceptions import BadOperatorError, MissingQueryError
 from .orm import OrmMixin
 from .utils import BaseQuery
-from .config import es
+from .config import config
 
 
 class ElasticDataFrame(OrmMixin):
@@ -31,6 +31,10 @@ class ElasticDataFrame(OrmMixin):
         self._query = None
         self._limit = None
         super(ElasticDataFrame, self).__init__()
+
+    @property
+    def _es(self):
+        return config.connection
 
     def __getitem__(self, item):
         if isinstance(item, basestring):
@@ -74,10 +78,10 @@ class ElasticDataFrame(OrmMixin):
         Returns:
             dict: Document source for a given ID
         """
-        doc = es.get(index=self.index,
-                     id=id,
-                     doc_type='doc',
-                     _source=fields)
+        doc = self._es.get(index=self.index,
+                           id=id,
+                           doc_type='doc',
+                           _source=fields)
         return doc['_source']
 
     __call__ = get
@@ -85,7 +89,7 @@ class ElasticDataFrame(OrmMixin):
     @classmethod
     def list_indices(cls):
         """List all the indices in the elasticsearch cluster."""
-        return es.indices.get('*').keys()
+        return config.es.indices.get('*').keys()
 
     def limit(self, n):
         """Limit the number of results returned by elasticsearch.
@@ -122,17 +126,17 @@ class ElasticDataFrame(OrmMixin):
     def _execute(self, body, size, fields=None, preserve_order=False, **es_kwargs):
         """Execute elasticsearch query."""
         if size is None:
-            return scan(client=es,
+            return scan(client=self._es,
                         index=self.index,
                         query=body,
                         preserve_order=preserve_order,
                         _source=fields,
                         **es_kwargs)
-        return es.search(index=self.index,
-                         body=body,
-                         size=size,
-                         _source=fields,
-                         **es_kwargs)
+        return self._es.search(index=self.index,
+                               body=body,
+                               size=size,
+                               _source=fields,
+                               **es_kwargs)
 
     def collect(self, fields=None, limit=None, raw=False, preserve_order=False,
                 **es_kwargs):
@@ -168,7 +172,7 @@ class ElasticDataFrame(OrmMixin):
         Returns:
             int: The number of documents
         """
-        results = es.count(index=self.index, body=self._body)
+        results = self._es.count(index=self.index, body=self._body)
         return results['count']
 
     def take(self, n, fields=None):
