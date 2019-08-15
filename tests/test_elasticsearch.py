@@ -1,10 +1,8 @@
 import pandas as pd
 
-from fixtures import TEST_ID
 
-
-def test_get_by_id(df):
-    result = df.get(TEST_ID)
+def test_get_by_id(df, test_id):
+    result = df.get(test_id)
     assert result == {'ns1': {'attr1': 10}, 'attr2': 4}
 
 
@@ -48,13 +46,13 @@ def test_field_filter_collect_namespaced_attr(df):
         assert 'ns1' in i
 
 
-def test_field_filter_get_attr(df):
-    result = df.get(TEST_ID, fields=['attr2'])
+def test_field_filter_get_attr(df, test_id):
+    result = df.get(test_id, fields=['attr2'])
     assert result == {'attr2': 4}
 
 
-def test_field_filter_get_namespaced_attr(df):
-    result = df.get(TEST_ID, fields=['ns1.attr1'])
+def test_field_filter_get_namespaced_attr(df, test_id):
+    result = df.get(test_id, fields=['ns1.attr1'])
     assert result == {'ns1': {'attr1': 10}}
 
 

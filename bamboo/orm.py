@@ -7,6 +7,7 @@ from abc import ABCMeta
 from collections import defaultdict
 
 from . import field
+from .config import es
 from .exceptions import FieldConflictError, MissingMappingError
 
 
@@ -20,6 +21,10 @@ class OrmMixin(object):
     """
 
     __metaclass__ = ABCMeta
+
+    def __init__(self, *args, **kwargs):
+        """Init OrmMixin."""
+        self._load_mapping()
 
     @property
     def fields(self):
@@ -68,8 +73,8 @@ class OrmMixin(object):
 
     def _load_mapping(self):
         """Acquire the index mapping from elasticsearch."""
-        raw = self._es.indices.get_mapping(index=self.index,
-                                           include_type_name=False)
+        raw = es.indices.get_mapping(index=self.index,
+                                     include_type_name=False)
         _, raw = raw.popitem()
         properties = raw['mappings'].get('properties')
         if properties:

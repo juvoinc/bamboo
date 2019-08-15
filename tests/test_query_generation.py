@@ -1,3 +1,5 @@
+from datetime import date, timedelta
+
 import pytest
 
 from bamboo import BadOperatorError
@@ -74,7 +76,7 @@ def test_nested_namespace(df):
     list(df.collect())  # assert no query error
 
 
-def test_bool_query(ds, reverse):
+def test_bool_query(df, reverse):
     df = df[df.ns2.attr3 == False] if reverse else df[False == df.ns2.attr3]
     assert df._body == {
         'query': {
@@ -84,7 +86,7 @@ def test_bool_query(ds, reverse):
     list(df.collect())  # assert no query error
 
 
-def test_currency(ds, reverse):
+def test_currency(df, reverse):
     # ingest as 10.5999 but expect to 2 decimal places on retrieve
     df = df[df.ns2.big_fee == 10.60] if reverse else df[10.60 == df.ns2.big_fee]
     assert df._body == {
@@ -96,7 +98,7 @@ def test_currency(ds, reverse):
     assert r
 
 
-def test_numeric_lt(ds, reverse):
+def test_numeric_lt(df, reverse):
     df = df[df.ns1.attr1 < 5] if reverse else df[5 > df.ns1.attr1]
     assert df._body == {
         'query': {
@@ -108,7 +110,7 @@ def test_numeric_lt(ds, reverse):
     list(df.collect())  # assert no query error
 
 
-def test_numeric_lte(ds, reverse):
+def test_numeric_lte(df, reverse):
     df = df[df.ns1.attr1 <= 5] if reverse else df[5 >= df.ns1.attr1]
     assert df._body == {
         'query': {
@@ -120,7 +122,7 @@ def test_numeric_lte(ds, reverse):
     list(df.collect())  # assert no query error
 
 
-def test_numeric_gt(ds, reverse):
+def test_numeric_gt(df, reverse):
     df = df[df.ns1.attr1 > 5] if reverse else df[5 < df.ns1.attr1]
     assert df._body == {
         'query': {
@@ -132,7 +134,7 @@ def test_numeric_gt(ds, reverse):
     list(df.collect())  # assert no query error
 
 
-def test_numeric_gte(ds, reverse):
+def test_numeric_gte(df, reverse):
     df = df[df.ns1.attr1 >= 5] if reverse else df[5 <= df.ns1.attr1]
     assert df._body == {
         'query': {
@@ -144,7 +146,7 @@ def test_numeric_gte(ds, reverse):
     list(df.collect())  # assert no query error
 
 
-def test_numeric_equal(ds, reverse):
+def test_numeric_equal(df, reverse):
     df = df[df.ns1.attr1 == 5] if reverse else df[5 == df.ns1.attr1]
     assert df._body == {
         'query': {
@@ -154,7 +156,7 @@ def test_numeric_equal(ds, reverse):
     list(df.collect())  # assert no query error
 
 
-def test_numeric_not_equal(ds, reverse):
+def test_numeric_not_equal(df, reverse):
     df = df[df.ns1.attr1 != 5] if reverse else df[5 != df.ns1.attr1]
     assert df._body == {
         'query': {
@@ -256,7 +258,7 @@ def test_chained_invert_3(df):
     df = df[df.ns1.attr1 > 5]
     df = df[df.ns4.attr4 == 9]
     df = df[df.ns1.attr2 == 6.0]
-    df = ~ds
+    df = ~df
     assert df._body == {
         'query': {
             'bool': {
@@ -301,7 +303,7 @@ def test_chained_invert_3(df):
     list(df.collect())  # assert no query error
 
 
-def test_text_equals(ds, reverse):
+def test_text_equals(df, reverse):
     df = df[df.ns2.os == 'value'] if reverse else df['value' == df.ns2.os]
     assert df._body == {
         'query': {
@@ -768,7 +770,7 @@ def test_invert_2(df):
 
 def test_invert_or(df):
     df = df[(df.ns1.attr1 == 5) | (df.ns1.attr2 == 8.0)]
-    df = ~ds
+    df = ~df
     assert df._body == {
         'query': {
             'bool': {
@@ -802,7 +804,7 @@ def test_invert_or(df):
 
 def test_invert_and(df):
     df = df[(df.ns1.attr1 == 5) & (df.ns1.attr2 == 8.0)]
-    df = ~ds
+    df = ~df
     assert df._body == {
         'query': {
             'bool': {
@@ -902,7 +904,7 @@ def test_double_invert_or(df):
 
 def test_invert_invert_and(df):
     df = df[~(df.ns1.attr1 == 9) & ~(df.ns1.attr2 == 5.0)]
-    df = ~ds
+    df = ~df
     assert df._body == {
         'query': {
             'bool': {
@@ -922,7 +924,7 @@ def test_invert_invert_and(df):
 
 def test_invert_invert_or(df):
     df = df[~(df.ns1.attr1 == 9) | ~(df.ns1.attr2 == 5.0)]
-    df = ~ds
+    df = ~df
     assert df._body == {
         'query': {
             'bool': {

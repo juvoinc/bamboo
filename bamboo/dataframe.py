@@ -2,13 +2,12 @@
 from copy import deepcopy
 
 import pandas as pd
-from elasticsearch import Elasticsearch
 from elasticsearch.helpers import scan
 
-from ..utils import CONFIG, HOST
 from .exceptions import BadOperatorError, MissingQueryError
 from .orm import OrmMixin
 from .utils import BaseQuery
+from .config import es
 
 
 class ElasticDataFrame(OrmMixin):
@@ -18,9 +17,6 @@ class ElasticDataFrame(OrmMixin):
         index: The elasticsearch index name
         body: Raw query sent to elasticsearch
     """
-
-    _es = Elasticsearch([HOST], timeout=int(CONFIG['TIMEOUT']))
-
     def __init__(self, index, frozen=True):
         """Init ElasticDataFrame.
 
@@ -32,9 +28,9 @@ class ElasticDataFrame(OrmMixin):
         if not frozen:
             raise NotImplementedError
         self.index = index
-        self._load_mapping()
         self._query = None
         self._limit = None
+        super(ElasticDataFrame, self).__init__()
 
     def __getitem__(self, item):
         if isinstance(item, basestring):
@@ -78,7 +74,7 @@ class ElasticDataFrame(OrmMixin):
         Returns:
             dict: Document source for a given ID
         """
-        doc = self._es.get(index=self.index,
+        doc = es.get(index=self.index,
                            id=id,
                            doc_type='doc',
                            _source=fields)
@@ -126,17 +122,17 @@ class ElasticDataFrame(OrmMixin):
     def _execute(self, body, size, fields=None, preserve_order=False, **es_kwargs):
         """Execute elasticsearch query."""
         if size is None:
-            return scan(client=self._es,
+            return scan(client=es,
                         index=self.index,
                         query=body,
                         preserve_order=preserve_order,
                         _source=fields,
                         **es_kwargs)
-        return self._es.search(index=self.index,
-                               body=body,
-                               size=size,
-                               _source=fields,
-                               **es_kwargs)
+        return es.search(index=self.index,
+                         body=body,
+                         size=size,
+                         _source=fields,
+                         **es_kwargs)
 
     def collect(self, fields=None, limit=None, raw=False, preserve_order=False,
                 **es_kwargs):
@@ -172,7 +168,7 @@ class ElasticDataFrame(OrmMixin):
         Returns:
             int: The number of documents
         """
-        results = self._es.count(index=self.index, body=self._body)
+        results = es.count(index=self.index, body=self._body)
         return results['count']
 
     def take(self, n, fields=None):
