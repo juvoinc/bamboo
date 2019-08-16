@@ -1,13 +1,12 @@
 """Pandas-style framework for interacting with elasticsearch."""
 from copy import deepcopy
 
-import pandas as pd
 from elasticsearch.helpers import scan
 
+from .config import config
 from .exceptions import BadOperatorError, MissingQueryError
 from .orm import OrmMixin
 from .utils import BaseQuery
-from .config import config
 
 
 class ElasticDataFrame(OrmMixin):
@@ -210,9 +209,14 @@ class ElasticDataFrame(OrmMixin):
         Returns:
             pd.DataFrame: The response from elasticsearch
         """
-        data = self.collect(fields, raw=False, preserve_order=False)
-        data = (self.__nested_to_dot(i) for i in data)
-        return pd.DataFrame(data)
+        try:
+            import pandas as pd
+        except ImportError:
+            raise ImportError('Install pandas for pandas support.')
+        else:
+            data = self.collect(fields, raw=False, preserve_order=False)
+            data = (self.__nested_to_dot(i) for i in data)
+            return pd.DataFrame(data)
 
     @classmethod
     def __nested_to_dot(cls, hit, namespace=''):

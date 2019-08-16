@@ -11,7 +11,6 @@ setup(
     setup_requires=["pytest-runner", "flake8"],
     tests_require=["pytest", "pytest-cov"],
     install_requires=[
-        'elasticsearch>=6.0.0,<7.0.0',
-        'pandas'
+        'elasticsearch>=6.0.0,<7.0.0'
     ]
 )
