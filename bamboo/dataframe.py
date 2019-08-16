@@ -86,10 +86,10 @@ class ElasticDataFrame(OrmMixin):
 
     __call__ = get
 
-    @classmethod
-    def list_indices(cls):
+    @staticmethod
+    def list_indices():
         """List all the indices in the elasticsearch cluster."""
-        return config.es.indices.get('*').keys()
+        return config.connection.indices.get('*').keys()
 
     def limit(self, n):
         """Limit the number of results returned by elasticsearch.
