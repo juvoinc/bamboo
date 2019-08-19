@@ -1,4 +1,5 @@
 """Module for managing elasticsearch / bamboo configuration settings."""
+import os
 from collections import MutableMapping
 
 from elasticsearch import Elasticsearch
@@ -19,7 +20,8 @@ class Config(MutableMapping):
         """Init Config."""
         self.config_files = ('setup.cfg', 'tox.ini', '.bamboo')
         self.connection = None
-        self._config = kwargs
+        self._config = {}
+        self.__search(kwargs)
 
     @set_connection
     def __call__(self, **kwargs):
@@ -41,6 +43,24 @@ class Config(MutableMapping):
     @set_connection
     def __delitem__(self, key):
         del self._config[key]
+
+    def __search(self, kwargs):
+        self.__from_env()
+        self.__from_files()
+        self.update(kwargs)
+
+    def __from_env(self):
+        for k, v in os.environ.items():
+            lower_k = k.lower()
+            if lower_k.startswith('bamboo'):
+                var_idx = lower_k.index('_') + 1
+                # convert to array if spaces in env var string
+                v = v.split(' ') if ' ' in v else v
+                self[lower_k[var_idx:]] = v
+
+    def __from_files(self):
+        for fname in self.config_files:
+            pass
 
 
 config = Config()
