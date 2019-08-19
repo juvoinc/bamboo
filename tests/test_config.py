@@ -6,6 +6,7 @@ HOSTS = ['host1', 'host2', 'host3']
 ENV_HOSTS = ' '.join(HOSTS)  # "host1 host2 host3"
 DUMMY_HOSTS = ['not_the_host']
 
+
 def test_kwargs():
     config = Config(hosts=HOSTS)
     assert config['hosts'] == HOSTS
