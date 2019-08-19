@@ -59,26 +59,6 @@ TEMPLATE = {
                     }
                 },
                 {
-                    "principal_as_currency": {
-                        "match_mapping_type": "double",
-                        "match": "*_principal*",
-                        "mapping": {
-                            "type": "scaled_float",
-                            "scaling_factor": 100
-                        }
-                    }
-                },
-                {
-                    "revenue_as_currency": {
-                        "match_mapping_type": "double",
-                        "match": "*_revenue*",
-                        "mapping": {
-                            "type": "scaled_float",
-                            "scaling_factor": 100
-                        }
-                    }
-                },
-                {
                     "integers": {
                         "match_mapping_type": "long",
                         "mapping": {
