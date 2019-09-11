@@ -10,7 +10,7 @@ setup(
     packages=['bamboo'],
     python_requires='>=2.7',
     setup_requires=["pytest-runner", "flake8"],
-    tests_require=["pytest", "pytest-cov"],
+    tests_require=["pytest", "pytest-cov", "pandas"],
     install_requires=[
         'elasticsearch>=6.0.0,<7.0.0'
     ]
