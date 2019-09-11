@@ -6,6 +6,7 @@ from elasticsearch import Elasticsearch
 
 
 def set_connection(func):
+    """Decorate function to recreate elasticsearch connection object."""
     def wrapper(obj, *args, **kwargs):
         func(obj, *args, **kwargs)
         obj.connection = Elasticsearch(**obj)
@@ -25,6 +26,7 @@ class Config(MutableMapping):
 
     @set_connection
     def __call__(self, **kwargs):
+        """Set connection arguments."""
         self._config.update(kwargs)
 
     def __iter__(self):

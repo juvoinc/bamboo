@@ -5,7 +5,7 @@ from copy import deepcopy
 from datetime import datetime, timedelta
 from functools import wraps
 
-from .utils import Bool, Query
+from .query import Bool, Query
 
 
 def check_inversion(func):

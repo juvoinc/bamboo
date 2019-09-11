@@ -14,12 +14,13 @@ Exceptions:
     MissingQueryError: Raise when no query has been defined
 """
 from .config import config
-from .dataframe import ElasticDataFrame
+from .dataframe import DataFrame, ElasticDataFrame
 from .exceptions import (BadOperatorError, FieldConflictError,
                          MissingMappingError, MissingQueryError)
 
 __all__ = [
     config,
+    DataFrame,
     ElasticDataFrame,
     BadOperatorError,
     FieldConflictError,

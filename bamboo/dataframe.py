@@ -6,10 +6,11 @@ from elasticsearch.helpers import scan
 from .config import config
 from .exceptions import BadOperatorError, MissingQueryError
 from .orm import OrmMixin
-from .utils import BaseQuery
+from .query import BaseQuery
+from .utils import deprecated
 
 
-class ElasticDataFrame(OrmMixin):
+class DataFrame(OrmMixin):
     """Api for elasticsearch with pandas-style filtering operations.
 
     Attributes:
@@ -29,11 +30,21 @@ class ElasticDataFrame(OrmMixin):
         self.index = index
         self._query = None
         self._limit = None
-        super(ElasticDataFrame, self).__init__()
+        super(DataFrame, self).__init__()
 
     @property
     def _es(self):
         return config.connection
+
+    def __repr__(self):
+        try:
+            import pandas as pd
+        except ImportError:
+            return '{}({})'.format(self.__name__, self.index)
+        else:
+            data = self.collect(limit=100, raw=False, preserve_order=False)
+            data = (self.__nested_to_dot(i) for i in data)
+            return repr(pd.DataFrame(data))
 
     def __getitem__(self, item):
         if isinstance(item, basestring):
@@ -229,3 +240,13 @@ class ElasticDataFrame(OrmMixin):
             else:
                 d[key] = v
         return d
+
+
+@deprecated
+class ElasticDataFrame(DataFrame):
+    """Api for elasticsearch with pandas-style filtering operations.
+
+    Attributes:
+        index: The elasticsearch index name
+        body: Raw query sent to elasticsearch
+    """

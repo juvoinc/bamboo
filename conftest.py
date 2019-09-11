@@ -1,7 +1,7 @@
 import pytest
 from elasticsearch.helpers import bulk
 
-from bamboo import ElasticDataFrame
+from bamboo import DataFrame
 from bamboo.config import config
 
 TEST_INDEX = 'bamboo-test-index-'
@@ -104,7 +104,7 @@ def test_id():
 @pytest.fixture
 def df():
     """Init ElasticDataFrame using text index."""
-    return ElasticDataFrame(TEST_INDEX)
+    return DataFrame(TEST_INDEX)
 
 
 @pytest.fixture(scope="session", autouse=True)

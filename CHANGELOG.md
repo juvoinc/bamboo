@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Deprecated ElasticDataFrame.
+- Moved query classes from utils.py to query.py
 
 ### Removed
 
@@ -24,4 +25,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Fix Markdown links to tag comparison URL with footnote-style links.
+- blank.
