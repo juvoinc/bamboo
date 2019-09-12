@@ -13,11 +13,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Repr for DataFrame when viewing in jupyter notebook.
 - DataFrame as replacement for ElasticDataFrame.
+- Boost method for queries.
+- Boost helper function to wrap queries.
 
 ### Changed
 
 - Deprecated ElasticDataFrame.
 - Moved query classes from utils.py to query.py
+- Changed DataFrame.take from generator to return a list.
 
 ### Removed
 

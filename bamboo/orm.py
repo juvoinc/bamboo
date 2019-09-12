@@ -20,10 +20,15 @@ class OrmMixin(object):
     """
 
     __metaclass__ = ABCMeta
-
-    def __init__(self, *args, **kwargs):
-        """Init OrmMixin."""
-        self._load_mapping()
+    _type_mapping = {
+        'integer': field.Integer,
+        'float': field.Float,
+        'scaled_float': field.Decimal,
+        'keyword': field.String,
+        'text': field.String,
+        'date': field.Date,
+        'boolean': field.Boolean
+    }
 
     @property
     def fields(self):
@@ -70,8 +75,8 @@ class OrmMixin(object):
         """
         return getattr(self, key)
 
-    def _load_mapping(self):
-        """Acquire the index mapping from elasticsearch."""
+    def _load_orm(self):
+        """Map elasticsearch index fields to attributes."""
         raw = self._es.indices.get_mapping(index=self.index,
                                            include_type_name=False)
         _, raw = raw.popitem()
@@ -104,7 +109,7 @@ class OrmMixin(object):
 
     def __add_field(self, name, dtype, namespace):
         """Create a field and adds it as an object attribute."""
-        Field = field._type_mapping.get(dtype, field.Dummy)
+        Field = self._type_mapping.get(dtype, field.Dummy)
         if namespace is not None:
             f = Field(name, namespace)
             setattr(namespace, name, f)

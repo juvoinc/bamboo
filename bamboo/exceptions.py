@@ -4,19 +4,22 @@
 class FieldConflictError(Exception):
     """Raise when a root field conflicts with a namespace."""
 
+    msg = "Field name `{}` conflicts with a namespace in the mapping"
+
     def __init__(self, name):
         """Init FieldConflictError.
 
         Args:
             name (str): The name of the conflicting field
         """
-        msg = "Field name `{}` conflicts with a namespace in the mapping"
-        msg = msg.format(name)
+        msg = self.msg.format(name)
         super(FieldConflictError, self).__init__(msg)
 
 
 class MissingMappingError(Exception):
     """Raise when no mapping could be found for an index."""
+
+    msg = "No mapping found for index `{}`"
 
     def __init__(self, index):
         """Init MissingMappingError.
@@ -24,7 +27,7 @@ class MissingMappingError(Exception):
         Args:
             index (str): The name of the index
         """
-        msg = "No mapping found for index `{}`".format(index)
+        msg = self.msg.format(index)
         super(MissingMappingError, self).__init__(msg)
 
 
@@ -35,10 +38,11 @@ class MissingQueryError(ValueError):
     and no query currently is defined in the Dataframe object
     """
 
+    msg = "No query found for operation"
+
     def __init__(self):
         """Init MissingQueryError."""
-        msg = "No query found for operation"
-        super(MissingMappingError, self).__init__(msg)
+        super(MissingMappingError, self).__init__(self.msg)
 
 
 class BadOperatorError(TypeError):
@@ -48,6 +52,13 @@ class BadOperatorError(TypeError):
     column-level `x == True`
     """
 
-    def __init__(self):
-        """Init BadOperatorError."""
-        super(BadOperatorError, self).__init__("Invalid operator")
+    msg = "Invalid operator: {}"
+
+    def __init__(self, obj):
+        """Init BadOperatorError.
+
+        Args:
+            obj (object): The object that caused this error to raise.
+        """
+        msg = self.msg.format(type(obj))
+        super(BadOperatorError, self).__init__(msg)

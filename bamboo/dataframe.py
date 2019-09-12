@@ -6,7 +6,7 @@ from elasticsearch.helpers import scan
 from .config import config
 from .exceptions import BadOperatorError, MissingQueryError
 from .orm import OrmMixin
-from .query import BaseQuery
+from .query import Query
 from .utils import deprecated
 
 
@@ -17,6 +17,7 @@ class DataFrame(OrmMixin):
         index: The elasticsearch index name
         body: Raw query sent to elasticsearch
     """
+
     def __init__(self, index, frozen=True):
         """Init ElasticDataFrame.
 
@@ -30,7 +31,7 @@ class DataFrame(OrmMixin):
         self.index = index
         self._query = None
         self._limit = None
-        super(DataFrame, self).__init__()
+        self._load_orm()
 
     @property
     def _es(self):
@@ -49,11 +50,11 @@ class DataFrame(OrmMixin):
     def __getitem__(self, item):
         if isinstance(item, basestring):
             return getattr(self, item)
-        if isinstance(item, BaseQuery):
+        if isinstance(item, Query):
             new = deepcopy(self)
             new._query &= item
             return new
-        raise BadOperatorError
+        raise BadOperatorError(item)
 
     def __and__(self, other):
         new = deepcopy(self)
@@ -197,9 +198,9 @@ class DataFrame(OrmMixin):
                     same syntax.
 
         Returns:
-            generator: The response from elasticsearch
+            list: The response from elasticsearch
         """
-        return self.collect(fields=fields, limit=n)
+        return list(self.collect(fields=fields, limit=n))
 
     def __hits(self, results):
         """Format the raw elasticsearch results to return just source."""
@@ -243,10 +244,5 @@ class DataFrame(OrmMixin):
 
 
 @deprecated
-class ElasticDataFrame(DataFrame):
-    """Api for elasticsearch with pandas-style filtering operations.
-
-    Attributes:
-        index: The elasticsearch index name
-        body: Raw query sent to elasticsearch
-    """
+class ElasticDataFrame(DataFrame):  # noqa: D101
+    pass

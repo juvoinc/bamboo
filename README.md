@@ -6,7 +6,6 @@ Pandas-style interface for Elasticsearch.
 
 `$ pip install git+ssh://git@github.com/juvoinc/bamboo.git`
 
-
 ## Development
 
 ### Test code
@@ -15,4 +14,4 @@ Pandas-style interface for Elasticsearch.
 
 ### Lint code
 
-`$ python seutp.py flake8`
+`$ python seutp.py lint`

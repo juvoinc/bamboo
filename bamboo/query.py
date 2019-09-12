@@ -6,37 +6,47 @@ from copy import deepcopy
 from .exceptions import BadOperatorError
 
 
-class BaseQuery(dict):
-    """Parent class for query and bool classes."""
+def boost(query, value):
+    """Boost the weight of the query by the value.
 
-    __metaclass__ = ABCMeta
+    Helps keep things clean when writing multiple querys by avoiding
+    an extra pair of parenthesis.
 
-    @staticmethod
-    def _validate(item):
-        """Ensure inputs are of correct type."""
-        if not isinstance(item, BaseQuery):
-            raise BadOperatorError
-
-    @abstractproperty
-    def body(self):
-        """Return the query body formatted for elasticsearch."""
-        pass
+    Instead of writing:
+        df[(df.attr1 > 5).boost(2.0) & (df.attr2 < 2).boost(3.0)]
+    You can write:
+        df[boost(ds.attr1 > 5, 2.0) & boost(ds.attr2 < 2, 3.0)]
+    """
+    return query.boost(value)
 
 
-class Query(BaseQuery):
-    """Class for keeping track of simple queries.
+class Query(object):
+    """Base class for other query types.
 
     Attributes:
+        field: Field the query is conditioned upon
+        value: Value the condition is applying
         body: Query body formatted for elasticsearch
     """
 
-    def __init__(self, query):
+    __metaclass__ = ABCMeta
+
+    def __init__(self, field, value, boost=None):
         """Init Query.
 
         Args:
-            query (str): The query body
+            field (str): Field the query is conditioned upon
+            value (obj): Value the condition is applying
+            boost (float, optional): Weight given to this query.
+                Default None.
         """
-        self.update(query)
+        self.field = field
+        self.value = value
+        self._boost = boost
+
+    @abstractproperty
+    def key(self):
+        """Get type of elasticsearch query object."""
 
     def __and__(self, other):
         if other is None:
@@ -53,15 +63,168 @@ class Query(BaseQuery):
     def __invert__(self):
         return Bool(must_not=[self])
 
-    @property
     def body(self):
-        """Query body formatted for elasticsearch."""
-        return self
+        """Return the query body formatted for elasticsearch."""
+        if self._boost:
+            return self._boosted_query
+        return self._query
+
+    @property
+    def _query(self):
+        return {
+            self.key: {
+                self.field: self.value
+            }
+        }
+
+    def _boosted_query(self):
+        return {
+            self.key: {
+                self.field: {
+                    'value': self.value,
+                    'boost': self._boost
+                }
+            }
+        }
+
+    def boost(self, value):
+        """Boost the weight of the query by the value."""
+        new = deepcopy(self)
+        new._boost = value
+        return new
 
     __rand__ = __and__
 
 
-class Bool(BaseQuery):
+class Term(Query):
+    """Find documents containing the exact term specified in the inverted index."""
+
+    key = 'term'
+
+
+class Regexp(Query):
+    """Find documents that contain terms matching a regular expression."""
+
+    key = 'regexp'
+
+
+class Wildcard(Query):
+    """Find documents that have fields matching a wildcard expression.
+
+    The field is not analyzed.
+
+    Supported wildcards are *, which matches any character sequence
+    (including the empty one), and ?, which matches any single character.
+
+    Note that this query can be slow, as it needs to iterate over many terms.
+    In order to prevent extremely slow wildcard queries, a wildcard term
+    should not start with one of the wildcards * or ?.
+    """
+
+    key = 'wildcard'
+
+
+class Prefix(Query):
+    """Find documents that contain a specific prefix in a provided field."""
+
+    key = 'prefix'
+
+
+class Match(Query):
+    """Find documents that match a provided text, number, date or boolean value.
+
+    The provided text is analyzed before matching.
+    """
+
+    key = 'match'
+
+    @property
+    def _boosted_query(self):
+        return {
+            self.key: {
+                self.field: {
+                    'query': self.value,
+                    'boost': self._boost
+                }
+            }
+        }
+
+
+class Exists(Query):
+    """Find documents that contain an indexed value for a field."""
+
+    key = 'exists'
+
+    def __init__(self, field, boost=None):
+        """Init Exists.
+
+        Args:
+            field (str): Field the query is checking for existence
+            boost (float, optional): Weight given to this query.
+                Default None.
+        """
+        super(Exists, self).__init__('field', field, boost)
+
+    def _boosted_query(self):
+        return {
+            self.key: {
+                'field': self.field,
+                'boost': self._boost
+            }
+        }
+
+
+class Range(Query):
+    """Find documents that contain terms within a provided range."""
+
+    key = 'range'
+
+    def __init__(self, field, value, boost=None):
+        """Init Query.
+
+        Args:
+            field (str): Field the query is conditioned upon
+            value (obj): Value the condition is applying
+            boost (float, optional): Weight given to this query.
+                Default None.
+        """
+        super(Range, self).__init__(self, field, value, boost)
+        self._operators = {}
+
+    def greater_than(self, value):
+        """Apply greater than operator to value."""
+        self._operators['gt'] = value
+
+    def greater_than_or_equal(self, value):
+        """Apply greater than or equal operator to value."""
+        self._operators['gte'] = value
+
+    def less_than(self, value):
+        """Apply less than operator to value."""
+        self._operators['lt'] = value
+
+    def less_than_or_equal(self, value):
+        """Apply less than or equal operator to value."""
+        self._operators['lte'] = value
+
+    @property
+    def _query(self):
+        return {
+            self.key: {
+                self.field: self._operators
+            }
+        }
+
+    @property
+    def _boosted_query(self):
+        return {
+            self.key: {
+                self.field: dict(self._operators, **{'boost': self._boost})
+            }
+        }
+
+
+class Bool(Query):
     """Class for keeping track of complex and nested queries.
 
     Attributes:
@@ -69,6 +232,8 @@ class Bool(BaseQuery):
     """
 
     _valid_params = {'must', 'must_not', 'should'}
+
+    key = 'bool'
 
     def __init__(self, **params):
         """Init Bool.
@@ -79,6 +244,10 @@ class Bool(BaseQuery):
             should (list): A list of queries that do not have to exist
                 but affect scoring/sorting
         """
+        # must, must_not and should (and filter?) as defined attributes
+        # validate at least one param is supplied
+        # validate_params should allow set and if set then convert to
+        # List[set]
         params = dict(self.__validate_params(params))
         self.update(params)
 
@@ -92,6 +261,12 @@ class Bool(BaseQuery):
                 assert isinstance(v, list), "Parameter must be a list"
                 yield k, filter(None, v)
 
+    @staticmethod
+    def _validate_obj(item):
+        """Ensure inputs are of correct type."""
+        if not isinstance(item, Query):
+            raise BadOperatorError(item)
+
     def __add__(self, other):
         params = self.merge_params(self, other)
         return Bool(**params)
@@ -99,7 +274,7 @@ class Bool(BaseQuery):
     def __and__(self, other):
         if other is None:
             return self
-        self._validate(other)
+        self._validate_obj(other)
         if isinstance(other, Query):
             return self + Bool(must=[other])
         if isinstance(self.body, Query):
@@ -109,7 +284,7 @@ class Bool(BaseQuery):
         return Bool(must=[self.body, other.body])
 
     def __or__(self, other):
-        self._validate(other)
+        self._validate_obj(other)
         if isinstance(other, Query):
             return self + Bool(should=[other])
         return Bool(
@@ -151,7 +326,7 @@ class Bool(BaseQuery):
         Returns:
             dict of lists of dicts: The merged query parameters
         """
-        d = defaultdict(list, deepcopy(a))
+        d = defaultdict(list, a)
         for k, v in b.items():
             d[k].extend(v)
         return d

@@ -2,7 +2,7 @@ from datetime import date, timedelta
 
 import pytest
 
-from bamboo import BadOperatorError
+from bamboo import BadOperatorError, boost
 
 
 @pytest.fixture(params=[True, False])
@@ -701,7 +701,6 @@ def test_age_query(df):
     days = 10
     df = df[df.ns3.test_date.age >= days]
     # direct access for rounding
-    print df._body
     dt = df._body['query']['range']['ns3.test_date']['lte']
     expected = date.today() - timedelta(days=days)
     assert dt.date() == expected
@@ -1020,3 +1019,55 @@ def test_match(df):
         }
     }
     list(df.collect())  # assert no query error
+
+
+def test_boost(df):
+    x = df[(df.ns1.attr1 > 5).boost(2.0)]
+    mask = df.ns1.attr1 > 5
+    y = df[mask.boost(2.0)]
+    z = df[boost(mask, 2.0)]
+    assert x._body == y._body == z._body
+    assert x._body == {'query': {'range': {'boost': 2.0, 'ns1.attr1': {'gt': 5}}}}
+    list(df.collect())  # assert no query error
+
+
+def test_boost_non_operator(df):
+    x = df[boost(df.ns1.exists(), 2.0)]
+    y = df[df.ns1.exists().boost(2.0)]
+    assert x._body == y._body
+    assert x._body == {'query': {'exists': {'boost': 2.0, 'field': 'ns1'}}}
+    list(df.collect())  # assert no query error
+
+
+def test_boost_two_filters(df):
+    df = df[boost(df.ns1.attr1 > 5, 2.0) & boost(df.attr2 == 6, 3.0)]
+    assert df._body == 0
+    list(df.collect())  # assert no query error
+
+
+def test_boost_two_filters_one_boost(df):
+    df = df[boost(df.ns1.attr1 > 5, 2.0) & (df.attr2 == 6)]
+    assert df._body == 0
+    list(df.collect())  # assert no query error
+
+
+def test_boost_filter_combination(df):
+    mask = (df.attr2 > 5) & (df.attr2 == 6)
+    df = df[mask.boost(2.0)]
+    assert df._body == 0
+    list(df.collect())  # assert no query error
+
+
+def test_boost_chained_condition(df):
+    df = df[boost(df.ns1.attr1 > 5, 2.0)]
+    df = df[boost(df.attr2 == 6, 3.0)]
+    assert df._body == 0
+    list(df.collect())  # assert no query error
+
+
+def test_regexp_boost_applied(df):
+    assert 0
+
+
+def test_prefix_boost_applied(df):
+    assert 0
