@@ -15,17 +15,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - DataFrame as replacement for ElasticDataFrame.
 - Boost method for queries.
 - Boost helper function to wrap queries.
+- Allow returning score in results.
+- Allow returning id in results.
+- Field.isin method for searching multiple terms.
+- Query objects.
 
 ### Changed
 
 - Deprecated ElasticDataFrame.
 - Moved query classes from utils.py to query.py
 - Changed DataFrame.take from generator to return a list.
+- Exposed DataFrame.execute as a public method.
 
 ### Removed
 
-- blank.
+- Raw results option from DataFrame.collect.
 
 ### Fixed
 
-- blank.
+- Bug where DataFrame.collect with `limit` set and `raw=True` would not return results.
+- Bug where deeply nested queries returned incorrect results.

@@ -3,6 +3,7 @@ from datetime import date, timedelta
 import pytest
 
 from bamboo import BadOperatorError, boost
+from bamboo.query import Bool, Term
 
 
 @pytest.fixture(params=[True, False])
@@ -259,6 +260,22 @@ def test_chained_invert_3(df):
     df = df[df.ns4.attr4 == 9]
     df = df[df.ns1.attr2 == 6.0]
     df = ~df
+    # flattened
+    # assert df._body == {
+    #     'query': {
+    #         'body': {
+    #             'must_not': [
+    #                 {
+    #                     'range': {
+    #                         'ns1.attr1': {'gt': 5}
+    #                     }
+    #                 },
+    #                 {'term': {'ns4.attr4': 9}},
+    #                 {'term': {'ns1.attr2': 6.0}}
+    #             ]
+    #         }
+    #     }
+    # }
     assert df._body == {
         'query': {
             'bool': {
@@ -804,6 +821,17 @@ def test_invert_or(df):
 def test_invert_and(df):
     df = df[(df.ns1.attr1 == 5) & (df.ns1.attr2 == 8.0)]
     df = ~df
+    # flattened
+    # assert df._body == {
+    #     'query': {
+    #         'bool': {
+    #             'must_not': [
+    #                 {'term': {'ns1.attr1': 5}},
+    #                 {'term': {'ns1.attr2': 8.0}}
+    #             ]
+    #         }
+    #     }
+    # }
     assert df._body == {
         'query': {
             'bool': {
@@ -870,6 +898,17 @@ def test_double_invert_and(df):
 
 def test_double_invert_or(df):
     df = df[~(df.ns1.attr1 == 9) | ~(df.ns1.attr2 == 5.0)]
+    # flattened
+    # assert df._body == {
+    #     'query': {
+    #         'bool': {
+    #             'must_not': [
+    #                 {'term': {'ns1.attr1': 9}},
+    #                 {'term': {'ns1.attr1': 5.0}}
+    #             ]
+    #         }
+    #     }
+    # }
     assert df._body == {
         'query': {
             'bool': {
@@ -943,18 +982,35 @@ def test_invert_invert_or(df):
 
 def test_nested_invert(df):
     df = df[(df.ns1.attr1 == 9) & ~(df.ns1.attr2 == 5.0)]
+    # flattened
+    # assert df._body == {
+    #     'query': {
+    #         'bool': {
+    #             'must': [
+    #                 {
+    #                     'term': {'ns1.attr1': 9}
+    #                 }
+    #             ],
+    #             'must_not': [
+    #                 {
+    #                     'term': {'ns1.attr2': 5.0}
+    #                 }
+    #             ]
+    #         }
+    #     }
+    # }
     assert df._body == {
         'query': {
             'bool': {
                 'must': [
                     {
-                        'term': {'ns1.attr1': 9}
-                    }
-                ],
-                'must_not': [
-                    {
-                        'term': {'ns1.attr2': 5.0}
-                    }
+                        'bool': {
+                            'must_not': [
+                                {'term': {u'ns1.attr2': 5.0}}
+                            ]
+                        }
+                    },
+                    {'term': {u'ns1.attr1': 9}},
                 ]
             }
         }
@@ -964,18 +1020,35 @@ def test_nested_invert(df):
 
 def test_nested_invert_or(df):
     df = df[(df.ns1.attr1 == 9) | ~(df.ns1.attr2 == 5.0)]
+    # flattened
+    # assert df._body == {
+    #     'query': {
+    #         'bool': {
+    #             'should': [
+    #                 {
+    #                     'term': {'ns1.attr1': 9}
+    #                 }
+    #             ],
+    #             'must_not': [
+    #                 {
+    #                     'term': {'ns1.attr2': 5.0}
+    #                 }
+    #             ]
+    #         }
+    #     }
+    # }
     assert df._body == {
         'query': {
             'bool': {
                 'should': [
                     {
-                        'term': {'ns1.attr1': 9}
-                    }
-                ],
-                'must_not': [
-                    {
-                        'term': {'ns1.attr2': 5.0}
-                    }
+                        'bool': {
+                            'must_not': [
+                                {'term': {u'ns1.attr2': 5.0}}
+                            ]
+                        }
+                    },
+                    {'term': {u'ns1.attr1': 9}},
                 ]
             }
         }
@@ -1007,8 +1080,8 @@ def test_limit(df):
     df = df[df.ns1.attr1.exists()]
     one = df.limit(1)
     two = df.limit(2)
-    assert len(list(one.collect(raw=False))) == 1
-    assert len(list(two.collect(raw=False))) == 2
+    assert len(list(one.collect())) == 1
+    assert len(list(two.collect())) == 2
 
 
 def test_match(df):
@@ -1027,7 +1100,16 @@ def test_boost(df):
     y = df[mask.boost(2.0)]
     z = df[boost(mask, 2.0)]
     assert x._body == y._body == z._body
-    assert x._body == {'query': {'range': {'boost': 2.0, 'ns1.attr1': {'gt': 5}}}}
+    assert x._body == {
+        'query': {
+            'range': {
+                'ns1.attr1': {
+                    'boost': 2.0,
+                    'gt': 5
+                }
+            }
+        }
+    }
     list(df.collect())  # assert no query error
 
 
@@ -1035,39 +1117,299 @@ def test_boost_non_operator(df):
     x = df[boost(df.ns1.exists(), 2.0)]
     y = df[df.ns1.exists().boost(2.0)]
     assert x._body == y._body
-    assert x._body == {'query': {'exists': {'boost': 2.0, 'field': 'ns1'}}}
+    assert x._body == {
+        'query': {
+            'exists': {
+                'boost': 2.0,
+                'field': 'ns1'
+            }
+        }
+    }
     list(df.collect())  # assert no query error
 
 
 def test_boost_two_filters(df):
     df = df[boost(df.ns1.attr1 > 5, 2.0) & boost(df.attr2 == 6, 3.0)]
-    assert df._body == 0
+    assert df._body == {
+        'query': {
+            'bool': {
+                'must': [
+                    {
+                        'range': {
+                            'ns1.attr1': {
+                                'gt': 5,
+                                'boost': 2.0
+                            }
+                        }
+                    },
+                    {
+                        'term': {
+                            'attr2': {
+                                'boost': 3.0,
+                                'value': 6
+                            }
+                        }
+                    }
+                ]
+            }
+        }
+    }
     list(df.collect())  # assert no query error
 
 
 def test_boost_two_filters_one_boost(df):
     df = df[boost(df.ns1.attr1 > 5, 2.0) & (df.attr2 == 6)]
-    assert df._body == 0
+    assert df._body == {
+        'query': {
+            'bool': {
+                'must': [
+                    {
+                        'range': {
+                            'ns1.attr1': {
+                                'gt': 5,
+                                'boost': 2.0
+                            }
+                        }
+                    },
+                    {
+                        'term': {
+                            'attr2': 6
+                        }
+                    }
+                ]
+            }
+        }
+    }
     list(df.collect())  # assert no query error
 
 
 def test_boost_filter_combination(df):
     mask = (df.attr2 > 5) & (df.attr2 == 6)
     df = df[mask.boost(2.0)]
-    assert df._body == 0
+    assert df._body == {
+        'query': {
+            'bool': {
+                'must': [
+                    {
+                        'range': {
+                            'attr2': {
+                                'gt': 5,
+                            }
+                        }
+                    },
+                    {
+                        'term': {
+                            'attr2': 6
+                        }
+                    }
+                ],
+                'boost': 2.0
+            }
+        }
+    }
     list(df.collect())  # assert no query error
 
 
 def test_boost_chained_condition(df):
     df = df[boost(df.ns1.attr1 > 5, 2.0)]
     df = df[boost(df.attr2 == 6, 3.0)]
-    assert df._body == 0
+    assert df._body == {
+        'query': {
+            'bool': {
+                'must': [
+                    {
+                        'range': {
+                            'ns1.attr1': {
+                                'gt': 5,
+                                'boost': 2.0
+                            }
+                        }
+                    },
+                    {
+                        'term': {
+                            'attr2': {
+                                'boost': 3.0,
+                                'value': 6
+                            }
+                        }
+                    }
+                ]
+            }
+        }
+    }
     list(df.collect())  # assert no query error
 
 
-def test_regexp_boost_applied(df):
-    assert 0
+def test_deeply_nested_query(df):
+    c1 = df.ns1.attr1 == 5
+    c2 = df.ns1.attr2 == 8.0
+    c3 = df.ns2.attr3 == True
+    c4 = df.attr2 == 6
+    df = df[c1 | (c2 & (c3 | ~c4))]
+    assert df._body == {
+        'query': {
+            'bool': {
+                'should': [
+                    {
+                        'bool': {
+                            'must': [
+                                {
+                                    'bool': {
+                                        'should': [
+                                            {
+                                                'bool': {
+                                                'must_not': [{'term': {u'attr2': 6}}]
+                                                }
+                                            },
+                                            {'term': {u'ns2.attr3': True}},
+                                        ]
+                                    }
+                                },
+                                {'term': {u'ns1.attr2': 8.0}}
+                            ]
+                        }
+                    },
+                    {'term': {u'ns1.attr1': 5}}
+                ]
+            }
+        }
+    }
+    list(df.collect())  # assert no query error
 
 
-def test_prefix_boost_applied(df):
-    assert 0
+def test_deeply_nested_query_2(df):
+    c1 = df.ns1.attr1 == 5
+    c2 = df.ns1.attr2 == 8.0
+    c3 = df.ns2.attr3 == True
+    c4 = df.attr2 == 6
+    df = df[c1 & (c2 | (c3 & ~c4))]
+    assert df._body == {
+        'query': {
+            'bool': {
+                'must': [
+                    {
+                        'bool': {
+                            'should': [
+                                {
+                                    'bool': {
+                                        'must': [
+                                            {
+                                                'bool': {
+                                                    'must_not': [{'term': {u'attr2': 6}}]
+                                                }
+                                            },
+                                            {'term': {u'ns2.attr3': True}},
+                                        ]
+                                    }
+                                },
+                                {'term': {u'ns1.attr2': 8.0}},
+                            ]
+                        }
+                    },
+                    {'term': {u'ns1.attr1': 5}},
+                ]
+            }
+        }
+    }
+    list(df.collect())  # assert no query error
+
+
+def test_negate_inner_should_with_must_not(df):
+    # not (z and (x or not y)) == not z or not (x or not y)
+    # not z or not (x or not y) == not z or (not x and y)
+    x = Term('x', 1)
+    y = Term('y', 2)
+    z = Term('z', 3)
+    b = Bool(should=[x, ~y])
+    b = ~Bool(must=[z, b])
+    query = b()
+    assert query == {'bool': {
+        'should': [
+            {'bool': {'must_not': [{'term': {'z': 3}}]}},
+            {'bool': {'must': [
+                {'bool': {'must_not': [{'term': {'x': 1}}]}},
+                {'term': {'y': 2}}
+            ]}}
+        ]
+    }}
+    assert df.execute({'query': query}, size=1)
+
+
+def test_negate_inner_must_with_must_not(df):
+    # not (z and (x and not y)) == not z or not (x and not y)
+    # not z or not (x and not y) == not z or (not x or y)
+    x = Term('x', 1)
+    y = Term('y', 2)
+    z = Term('z', 3)
+    b = Bool(must=[x, ~y])
+    b = ~Bool(must=[z, b])
+    query = b()
+    assert query == {'bool': {
+        'should': [
+            {'bool': {'must_not': [{'term': {'z': 3}}]}},
+            {'bool': {'should': [
+                {'bool': {'must_not': [{'term': {'x': 1}}]}},
+                {'term': {'y': 2}}]
+            }}
+        ]
+    }}
+    assert df.execute({'query': query}, size=1)
+
+
+def test_negate_inner_must_with_should(df):
+    # not (z and (x and y)) == not z or not (x and y)
+    # not z or not (x and y) == not z or (not x or not y)
+    x = Term('x', 1)
+    y = Term('y', 2)
+    z = Term('z', 3)
+    b = Bool(must=[x, y])
+    b = ~Bool(must=[z, b])
+    query = b()
+    assert query == {'bool': {
+        'should': [
+            {'bool': {'must_not': [{'term': {'z': 3}}]}},
+            {'bool': {'should': [
+                {'bool': {'must_not': [{'term': {'x': 1}}]}},
+                {'bool': {'must_not': [{'term': {'y': 2}}]}}
+            ]}}
+        ]
+    }}
+    assert df.execute({'query': query}, size=1)
+
+
+def test_or_with_inner_or(df):
+    # x or (y or z)
+    x = Term('x', 1)
+    y = Term('y', 2)
+    z = Term('z', 3)
+    b = Bool(should=[x, Bool(should=[y, z])])
+    query = b()
+    assert query == {'bool': {
+        'should': [
+            {'term': {'x': 1}},
+            {'bool': {'should': [
+                {'term': {'y': 2}},
+                {'term': {'z': 3}}
+            ]}}
+        ]
+    }}
+    assert df.execute({'query': query}, size=1)
+
+
+def test_and_with_inner_and(df):
+    # x and (y and z)
+    x = Term('x', 1)
+    y = Term('y', 2)
+    z = Term('z', 3)
+    b = Bool(must=[x, Bool(must=[y, z])])
+    query = b()
+    assert query == {'bool': {
+        'must': [
+            {'term': {'x': 1}},
+            {'bool': {'must': [
+                {'term': {'y': 2}},
+                {'term': {'z': 3}}
+            ]}}
+        ]
+    }}
+    assert df.execute({'query': query}, size=1)

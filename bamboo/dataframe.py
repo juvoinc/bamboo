@@ -19,7 +19,7 @@ class DataFrame(OrmMixin):
     """
 
     def __init__(self, index, frozen=True):
-        """Init ElasticDataFrame.
+        """Init DataFrame.
 
         Args:
             index (str): The name of the index to use
@@ -41,9 +41,9 @@ class DataFrame(OrmMixin):
         try:
             import pandas as pd
         except ImportError:
-            return '{}({})'.format(self.__name__, self.index)
+            return '{}({})'.format(type(self).__name__, self.index)
         else:
-            data = self.collect(limit=100, raw=False, preserve_order=False)
+            data = self.collect(limit=100, preserve_order=False)
             data = (self.__nested_to_dot(i) for i in data)
             return repr(pd.DataFrame(data))
 
@@ -109,7 +109,7 @@ class DataFrame(OrmMixin):
             n (int): The number of results to return
 
         Returns:
-            ElasticDataFrame: self
+            DataFrame: DataFrame with limit applied.
         """
         new = deepcopy(self)
         new._limit = n
@@ -120,7 +120,7 @@ class DataFrame(OrmMixin):
         """Raw query sent to elasticsearch."""
         if not self._query:
             return {'query': {'match_all': {}}}
-        return {'query': self._query.body}
+        return {'query': self._query()}
 
     def where(self, expression):
         """Set condition according to expression.
@@ -134,23 +134,42 @@ class DataFrame(OrmMixin):
         """
         raise NotImplementedError
 
-    def _execute(self, body, size, fields=None, preserve_order=False, **es_kwargs):
-        """Execute elasticsearch query."""
-        if size is None:
-            return scan(client=self._es,
-                        index=self.index,
-                        query=body,
-                        preserve_order=preserve_order,
-                        _source=fields,
-                        **es_kwargs)
-        return self._es.search(index=self.index,
-                               body=body,
-                               size=size,
-                               _source=fields,
-                               **es_kwargs)
+    def execute(self, body, size, fields=None, preserve_order=False, **es_kwargs):
+        """Execute elasticsearch query.
 
-    def collect(self, fields=None, limit=None, raw=False, preserve_order=False,
-                **es_kwargs):
+        Args:
+            body (dict): Query body in json format
+            size (int): The number of results to return. If None then
+                returns a generator scan of the entire index.
+            fields (List[str], optional): The fields to include in the document
+                _source in the return results. Defaults to None.
+            preserve_order (bool, optional): Whether to return the results
+                in sorted order. Only applies where size is None, otherwise
+                always returns results in sorted order. Defaults to False.
+
+        Returns:
+            List[dict]: The raw elasticsearch results. Returns a generator
+                if `size` is None.
+        """
+        if size is None:
+            return scan(
+                client=self._es,
+                index=self.index,
+                query=body,
+                preserve_order=preserve_order,
+                _source=fields,
+                **es_kwargs
+            )
+        return self._es.search(
+            index=self.index,
+            body=body,
+            size=size,
+            _source=fields,
+            **es_kwargs
+        )
+
+    def collect(self, fields=None, limit=None, preserve_order=False,
+                include_score=False, include_id=False, **es_kwargs):
         """Collect documents according to query conditions.
 
         Args:
@@ -159,23 +178,26 @@ class DataFrame(OrmMixin):
                 Note: Namespaced fields should be referenced using `.` syntax
                     (`<namespace>.<field>`). They will be returned using the
                     same syntax.
-            limit (int, optional): The number of results to return. Defaults to None.
-            raw (bool, optional): Whether to return the raw results or just the
-                source of document hits. Defautls to False.
+            limit (int, optional): The number of results to return. If a limit
+                is set then the documents will always be in sorted order.
+                Defaults to None.
             preserve_order (bool, optional): Whether to keep the documents
                 in sorted order. This will only be applied where no limit has
                 been set on the number of documents. Defaults to False.
                 Note: This may be expensive on large queries.
-            es_kwargs (dict, optional): Additional arguments to pass to elasticsearch.
+            include_score (bool, optional): Whether to include the document score in
+                the results. This can be computationally expensive. Default False.
+            include_id (bool, optional): Whether to include the document id
+                in the results. Default False.
+            **es_kwargs (dict, optional): Additional arguments to pass to elasticsearch.
 
         Returns:
             generator: The response from elasticsearch
         """
         size = limit or self._limit
-        results = self._execute(self._body, size, fields, preserve_order)
-        if raw:
-            return results
-        return self.__hits(results)
+        body = dict(self._body, **{'track_scores': include_score})
+        results = self.execute(body, size, fields, preserve_order, **es_kwargs)
+        return self.__hits(results, include_score, include_id)
 
     def count(self):
         """Return the count of documents that match.
@@ -202,11 +224,16 @@ class DataFrame(OrmMixin):
         """
         return list(self.collect(fields=fields, limit=n))
 
-    def __hits(self, results):
+    def __hits(self, results, include_score, include_id):
         """Format the raw elasticsearch results to return just source."""
         results = results['hits']['hits'] if isinstance(results, dict) else results
         for hit in results:
-            yield hit['_source']
+            result = hit['_source']
+            if include_score:
+                result['_score'] = hit.pop('_score')
+            if include_id:
+                result['_id'] = hit.pop('_id')
+            yield result
 
     def to_pandas(self, fields=None):
         """Collect documents according to query conditions as a pandas DataFrame.
@@ -226,7 +253,7 @@ class DataFrame(OrmMixin):
         except ImportError:
             raise ImportError('Install pandas for pandas support.')
         else:
-            data = self.collect(fields, raw=False, preserve_order=False)
+            data = self.collect(fields, preserve_order=False)
             data = (self.__nested_to_dot(i) for i in data)
             return pd.DataFrame(data)
 

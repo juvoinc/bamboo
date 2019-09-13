@@ -12,10 +12,10 @@ def check_inversion(func):
     """Decorate a method for invertible operations."""
     @wraps(func)
     def wrapper(obj, *args, **kwargs):
-        result = func(obj, *args, **kwargs)
+        condition = func(obj, *args, **kwargs)
         if obj._inverted is True:
-            result = query.Bool(must_not=[result])
-        return result
+            condition = query.Bool(must_not=condition)
+        return condition
     return wrapper
 
 
@@ -45,7 +45,7 @@ class Base(object):
         return new
 
     def __repr__(self):
-        return '{}({})'.format(self.__class__.__name__, self._name)
+        return '{}({})'.format(type(self).__name__, self._name)
 
     @property
     def name(self):
@@ -108,9 +108,14 @@ class Field(Base):
         return query.Term(self.name, value)
 
     def __ne__(self, value):
+        condition = query.Term(self.name, value)
         if self._inverted:
-            return Term(self.name, value)
-        return query.Bool(must_not=[query.Term(self.name, value)])
+            return condition
+        return query.Bool(must_not=condition)
+
+    @check_inversion
+    def isin(self, value):
+        return query.Terms(self.name, value)
 
     def value_counts(self, n=10, normalize=False, missing=None, **es_kwargs):
         """Get the unique value counts for a field.
@@ -187,7 +192,7 @@ class Field(Base):
                 }
             }
         })
-        results = self.root._execute(body, size=0, **es_kwargs)
+        results = self.root.execute(body, size=0, **es_kwargs)
         results = results['aggregations'][key]
         if buckets:
             return results.get('buckets', results)

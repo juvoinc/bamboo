@@ -4,6 +4,8 @@ from collections import MutableMapping
 
 from elasticsearch import Elasticsearch
 
+from .utils import dict_to_params
+
 
 def set_connection(func):
     """Decorate function to recreate elasticsearch connection object."""
@@ -23,6 +25,12 @@ class Config(MutableMapping):
         self.connection = None
         self._config = {}
         self.__search(kwargs)
+
+    def __repr__(self):
+        return '{}({})'.format(
+            type(self).__name__,
+            dict_to_params(self._config)
+        )
 
     @set_connection
     def __call__(self, **kwargs):

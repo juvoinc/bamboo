@@ -17,3 +17,8 @@ def deprecated(func):
         warnings.simplefilter('default', DeprecationWarning)  # reset filter
         return func(*args, **kwargs)
     return wrapper
+
+
+def dict_to_params(d):
+    """Convert dictionary to string representation of parameters."""
+    return ', ' .join('{}={}'.format(k, v) for k, v in d.items())
