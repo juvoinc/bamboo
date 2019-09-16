@@ -37,6 +37,13 @@ class Config(MutableMapping):
         """Set connection arguments."""
         self._config.update(kwargs)
 
+    def __getstate__(self):
+        return self._config
+
+    @set_connection
+    def __setstate__(self, state):
+        self._config = state
+
     def __iter__(self):
         return iter(self._config)
 

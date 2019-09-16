@@ -15,27 +15,33 @@ class DataFrame(OrmMixin):
 
     Attributes:
         index: The elasticsearch index name
-        body: Raw query sent to elasticsearch
+        config: Configuration object for elasticsearch
     """
 
-    def __init__(self, index, frozen=True):
+    config = config
+
+    def __init__(self, index, frozen=True, config=None):
         """Init DataFrame.
 
         Args:
             index (str): The name of the index to use
             frozen (bool, optional): Whether the dataframe is immutable.
                 Defaults to True.
+            config (config.Config.optional): Configuration object. If none
+                provided then uses mutable config.config in global namespace.
+                Defaults to None.
         """
         if not frozen:
             raise NotImplementedError
         self.index = index
+        self.config = config or self.config
         self._query = None
         self._limit = None
         self._load_orm()
 
     @property
     def _es(self):
-        return config.connection
+        return self.config.connection
 
     def __repr__(self):
         try:
@@ -97,10 +103,10 @@ class DataFrame(OrmMixin):
 
     __call__ = get
 
-    @staticmethod
-    def list_indices():
+    @classmethod
+    def list_indices(cls):
         """List all the indices in the elasticsearch cluster."""
-        return config.connection.indices.get('*').keys()
+        return cls.config.connection.indices.get('*').keys()
 
     def limit(self, n):
         """Limit the number of results returned by elasticsearch.
