@@ -361,17 +361,23 @@ class Bool(Query):
     def __and__(self, other):
         if not isinstance(other, Bool):
             return self + Bool(must=other)
-
-        # reduce must(must()) to must() when dataframe is chained
-        if not set(self.filtered_params) & set(other.filtered_params):
+        if self._can_flatten_with(other):
             return self + other
-
         return Bool(must=[self, other])
 
     def __or__(self, other):
         if not isinstance(other, Bool):
             return self + Bool(should=other)
+        if self._can_flatten_with(other):
+            return self + other
         return Bool(should=[self, other])
+
+    def _can_flatten_with(self, other):
+        """Check whether it is safe to add self+other.
+
+        Used to flatten must(must(must())) to must(). Likewise with should.
+        """
+        return not set(self.filtered_params) & set(other.filtered_params)
 
     def __invert__(self):
         return Bool(
@@ -441,14 +447,18 @@ class Script(Query):
             boost (float, optional): Weight given to this query.
                 Default None.
         """
-        super(Script, self).__init__('script', source, boost)
+        self.source = source
+        self._boost = boost
+
+    def __repr__(self):
+        return 'Script(source={}, boost={})'.format(self.source, self._boost)
 
     @property
     def _query(self):
         return {
             self.key: {
-                self.field: {
-                    'source': self.value,
+                self.key: {
+                    'source': self.source,
                     'lang': 'painless'
                 }
             }
@@ -458,19 +468,10 @@ class Script(Query):
     def _boosted_query(self):
         return {
             self.key: {
-                self.field: {
-                    'source': self.value,
-                    'lang': 'painless',
-                    'boost': self._boost
-                }
+                self.key: {
+                    'source': self.source,
+                    'lang': 'painless'
+                },
+                'boost': self._boost
             }
         }
-
-
-class Comparitor(Script):
-    """Find documents by comparing two different fields."""
-
-    def __init__(self, boost=None):
-        self._boost = boost
-        self._operators = []
-

@@ -1314,6 +1314,28 @@ def test_deeply_nested_query_2(df):
     list(df.collect())  # assert no query error
 
 
+def test_scripted_query(df):
+    source = "doc['ns1.attr1'].value > doc['ns4.attr4'].value"
+    df = df[df.query(source)]
+    assert df._body == {
+        'query': {
+            'script': {
+                'script': {
+                    'lang': 'painless',
+                    'source': "doc['ns1.attr1'].value > doc['ns4.attr4'].value"
+                }
+            }
+        }
+    }
+    list(df.collect())  # assert no query error
+
+
+def test_isin(df):
+    df = df[df.ns1.attr1.isin([1, 10])]
+    assert df._body == {'query': {'terms': {'ns1.attr1': [1, 10]}}}
+    list(df.collect())  # assert no query error
+
+
 def test_negate_inner_should_with_must_not(df):
     # not (z and (x or not y)) == not z or not (x or not y)
     # not z or not (x or not y) == not z or (not x and y)
@@ -1413,7 +1435,3 @@ def test_and_with_inner_and(df):
         ]
     }}
     assert df.execute({'query': query}, size=1)
-
-
-def test_scripted_query(df):
-    assert 0

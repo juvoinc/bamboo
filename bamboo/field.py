@@ -114,7 +114,12 @@ class Field(Base):
         return query.Bool(must_not=condition)
 
     @check_inversion
-    def isin(self, value):
+    def isin(self, values):
+        """Condition checking whether multiple terms are in a field's value.
+
+        Args:
+            values (list): Sequence of values to check
+        """
         return query.Terms(self.name, value)
 
     def value_counts(self, n=10, normalize=False, missing=None, **es_kwargs):

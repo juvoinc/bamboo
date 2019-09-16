@@ -94,32 +94,14 @@ def test_include_id(df):
         assert i['_id']
 
 
-def test_regexp_boost_applied(df):
-    # check scores and make sure actually increases
-    assert 0
-
-
-def test_prefix_boost_applied(df):
-    # check scores and make sure actually increases
-    assert 0
-
 def test_terms_boost_applied(df):
     df = df[df.ns1.attr1.isin([5, 10]).boost(2)]
-    print list(df.collect(include_score=True))
-    assert 0
+    results = list(df.collect(include_score=True))
+    assert all([i['_score']==2.0 for i in results])
 
 
 def test_negative_weight(df):
     df = df[df.attr2.exists().boost(-2) | (df.ns1.attr1 >= 5)]
-    print list(df.collect(include_score=True))
-    assert 0
-
-
-def test_score_increases_past_one(df):
-    df = df[df.attr2.exists() | (df.ns1.attr1 > 5)]
-    print list(df.collect(include_score=True))
-    assert 0
-
-
-def test_boost_zero_scores_zero(df):
-    assert 0
+    results = list(df.collect(include_score=True))
+    scores = {i['_score'] for i in results}
+    assert scores == {1.0, -2.0, -1.0}

@@ -15,3 +15,6 @@ Pandas-style interface for Elasticsearch.
 ### Lint code
 
 `$ python seutp.py lint`
+
+## Usage
+
