@@ -6,7 +6,7 @@ from elasticsearch.helpers import scan
 from .config import config
 from .exceptions import BadOperatorError, MissingQueryError
 from .orm import OrmMixin
-from .query import Query
+from .query import Query, Script
 
 
 class DataFrame(OrmMixin):
@@ -100,6 +100,17 @@ class DataFrame(OrmMixin):
         """List all the indices in the elasticsearch cluster."""
         return cls.config.connection.indices.get('*').keys()
 
+    def query(self, source):
+        """Set condition according to painless script.
+
+        Args:
+            source (str): Parseable expression string
+
+        Returns:
+            query.Script: Script query object.
+        """
+        return Script(source)
+
     def limit(self, n):
         """Limit the number of results returned by elasticsearch.
 
@@ -119,18 +130,6 @@ class DataFrame(OrmMixin):
         if not self._query:
             return {'query': {'match_all': {}}}
         return {'query': self._query()}
-
-    def where(self, expression):
-        """Set condition according to expression.
-
-        Args:
-            expression (str): Parseable expression string
-
-        imagining something like:
-          ds = ds.where('ns1.attr1 > 5')
-          ds = ds.where('attr1 > 5', namespace='ns1')
-        """
-        raise NotImplementedError
 
     def execute(self, body, size, fields=None, preserve_order=False, **es_kwargs):
         """Execute elasticsearch query.

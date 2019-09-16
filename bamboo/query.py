@@ -74,7 +74,7 @@ class Query(object):
 
     def __call__(self):
         """Return the query body formatted for elasticsearch."""
-        if self._boost:
+        if self._boost is not None:
             return self._boosted_query
         return self._query
 
@@ -126,7 +126,7 @@ class Terms(Query):
     key = 'terms'
 
     def __init__(self, field, value, boost=None):
-        """Init Query.
+        """Init Terms.
 
         Args:
             field (str): Field the query is conditioned upon
@@ -426,3 +426,51 @@ class Bool(Query):
         for k, v in b.items():
             d[k].extend(v)
         return d
+
+
+class Script(Query):
+    """Find documents matching a painless scripts as a query."""
+
+    key = 'script'
+
+    def __init__(self, source, boost=None):
+        """Init Exists.
+
+        Args:
+            source (str): Painless script
+            boost (float, optional): Weight given to this query.
+                Default None.
+        """
+        super(Script, self).__init__('script', source, boost)
+
+    @property
+    def _query(self):
+        return {
+            self.key: {
+                self.field: {
+                    'source': self.value,
+                    'lang': 'painless'
+                }
+            }
+        }
+
+    @property
+    def _boosted_query(self):
+        return {
+            self.key: {
+                self.field: {
+                    'source': self.value,
+                    'lang': 'painless',
+                    'boost': self._boost
+                }
+            }
+        }
+
+
+class Comparitor(Script):
+    """Find documents by comparing two different fields."""
+
+    def __init__(self, boost=None):
+        self._boost = boost
+        self._operators = []
+

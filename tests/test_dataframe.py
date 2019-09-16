@@ -120,3 +120,6 @@ def test_score_increases_past_one(df):
     print list(df.collect(include_score=True))
     assert 0
 
+
+def test_boost_zero_scores_zero(df):
+    assert 0

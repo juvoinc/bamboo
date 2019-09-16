@@ -1413,3 +1413,7 @@ def test_and_with_inner_and(df):
         ]
     }}
     assert df.execute({'query': query}, size=1)
+
+
+def test_scripted_query(df):
+    assert 0

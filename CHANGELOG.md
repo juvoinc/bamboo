@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Field.isin method for searching multiple terms.
 - Query objects.
 - Allow passing distinct config objects to dataframe in addition to setting a single global object used by all dataframes.
+- DataFrame.query method for applying custom script queries.
 
 ### Changed
 
