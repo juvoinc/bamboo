@@ -7,7 +7,6 @@ from .config import config
 from .exceptions import BadOperatorError, MissingQueryError
 from .orm import OrmMixin
 from .query import Query
-from .utils import deprecated
 
 
 class DataFrame(OrmMixin):
@@ -44,14 +43,7 @@ class DataFrame(OrmMixin):
         return self.config.connection
 
     def __repr__(self):
-        try:
-            import pandas as pd
-        except ImportError:
-            return '{}({})'.format(type(self).__name__, self.index)
-        else:
-            data = self.collect(limit=100, preserve_order=False)
-            data = (self.__nested_to_dot(i) for i in data)
-            return repr(pd.DataFrame(data))
+        return '{}({})'.format(type(self).__name__, self.index)
 
     def __getitem__(self, item):
         if isinstance(item, basestring):
@@ -276,6 +268,10 @@ class DataFrame(OrmMixin):
         return d
 
 
-@deprecated
-class ElasticDataFrame(DataFrame):  # noqa: D101
-    pass
+class ElasticDataFrame(DataFrame):
+    def __new__(cls, *args, **kwargs):
+        from warnings import warn
+        warn("{} is deprecated. Use DataFrame instead.".format(cls.__name__),
+             category=DeprecationWarning,
+             stacklevel=2)
+        return DataFrame(*args, **kwargs)

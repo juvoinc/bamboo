@@ -11,7 +11,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Repr for DataFrame when viewing in jupyter notebook.
 - DataFrame as replacement for ElasticDataFrame.
 - Boost method for queries.
 - Boost helper function to wrap queries.
