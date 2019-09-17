@@ -120,7 +120,7 @@ class Field(Base):
         Args:
             values (list): Sequence of values to check
         """
-        return query.Terms(self.name, value)
+        return query.Terms(self.name, values)
 
     def value_counts(self, n=10, normalize=False, missing=None, **es_kwargs):
         """Get the unique value counts for a field.
