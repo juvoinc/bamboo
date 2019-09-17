@@ -26,21 +26,21 @@ def test_take(df):
     df = df[df.ns1.attr1.exists()]
     df = df.limit(3)
     assert df._limit == 3
-    results = list(df.take(1))
+    results = df.take(1)
     assert len(results) == 1
     assert df._limit == 3  # does not alter internal limit
 
 
 def test_field_filter_collect_attr(df):
     df = df[df.ns1.attr1.exists()]
-    results = list(df.collect(fields=['attr2'], raw=False))
+    results = list(df.collect(fields=['attr2']))
     for i in results:
         assert 'ns1.attr1' not in i
 
 
 def test_field_filter_collect_namespaced_attr(df):
     df = df[df.ns1.attr1.exists()]
-    results = list(df.collect(fields=['ns1.attr1'], raw=False))
+    results = list(df.collect(fields=['ns1.attr1'],))
     for i in results:
         assert 'attr2' not in i
         assert 'ns1' in i
@@ -63,7 +63,7 @@ def test_count(df):
 
 def test_hits_returns_namespace_as_dict(df):
     df = df[df.ns2.attr3.exists()]
-    results = list(df.collect(raw=False))
+    results = list(df.collect())
     assert results == [
         {
             'ns2': {
@@ -71,3 +71,37 @@ def test_hits_returns_namespace_as_dict(df):
             }
         }
     ]
+
+
+def test_include_score(df):
+    df = df[df.ns1.attr1.exists()]
+    result = list(df.collect(include_score=True))
+    for i in result:
+        assert i['_score']
+
+
+def test_include_score_limit(df):
+    df = df[df.ns1.attr1.exists()]
+    result = list(df.collect(limit=1, include_score=True))
+    for i in result:
+        assert i['_score']
+
+
+def test_include_id(df):
+    df = df[df.ns1.attr1.exists()]
+    results = list(df.collect(include_id=True))
+    for i in results:
+        assert i['_id']
+
+
+def test_terms_boost_applied(df):
+    df = df[df.ns1.attr1.isin([5, 10]).boost(2)]
+    results = list(df.collect(include_score=True))
+    assert all([i['_score']==2.0 for i in results])
+
+
+def test_negative_weight(df):
+    df = df[df.attr2.exists().boost(-2) | (df.ns1.attr1 >= 5)]
+    results = list(df.collect(include_score=True))
+    scores = {i['_score'] for i in results}
+    assert scores == {1.0, -2.0, -1.0}

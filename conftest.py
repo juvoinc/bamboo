@@ -1,7 +1,8 @@
+"""Pytest fixtures."""
 import pytest
 from elasticsearch.helpers import bulk
 
-from bamboo import ElasticDataFrame
+from bamboo import DataFrame
 from bamboo.config import config
 
 TEST_INDEX = 'bamboo-test-index-'
@@ -98,17 +99,20 @@ TEMPLATE = {
 
 @pytest.fixture(scope="session")
 def test_id():
+    """Return test id."""
     return TEST_ID
 
 
 @pytest.fixture
-def df():
+def df(monkeypatch):
     """Init ElasticDataFrame using text index."""
-    return ElasticDataFrame(TEST_INDEX)
+    monkeypatch.setattr(DataFrame, '__repr__', lambda self: 'DataFrame')
+    return DataFrame(TEST_INDEX)
 
 
 @pytest.fixture(scope="session", autouse=True)
 def elasticsearch_index():
+    """Setup/teardown local test index."""
     template = 'test_template'
     config(hosts=['localhost'])
     es = config.connection

@@ -5,17 +5,17 @@ from copy import deepcopy
 from datetime import datetime, timedelta
 from functools import wraps
 
-from .utils import Bool, Query
+from . import query
 
 
 def check_inversion(func):
     """Decorate a method for invertible operations."""
     @wraps(func)
     def wrapper(obj, *args, **kwargs):
-        result = func(obj, *args, **kwargs)
+        condition = func(obj, *args, **kwargs)
         if obj._inverted is True:
-            result = Bool(must_not=[result])
-        return result
+            condition = query.Bool(must_not=condition)
+        return condition
     return wrapper
 
 
@@ -45,7 +45,7 @@ class Base(object):
         return new
 
     def __repr__(self):
-        return '{}({})'.format(self.__class__.__name__, self._name)
+        return '{}({})'.format(type(self).__name__, self._name)
 
     @property
     def name(self):
@@ -70,7 +70,7 @@ class Base(object):
     @check_inversion
     def exists(self):
         """Condition checking whether the field exists."""
-        return Query({'exists': {'field': self.name}})
+        return query.Exists(self.name)
 
 
 class Namespace(Base):
@@ -105,12 +105,22 @@ class Field(Base):
 
     @check_inversion
     def __eq__(self, value):
-        return Query({'term': {self.name: value}})
+        return query.Term(self.name, value)
 
     def __ne__(self, value):
+        condition = query.Term(self.name, value)
         if self._inverted:
-            return Query({'term': {self.name: value}})
-        return Bool(must_not=[{'term': {self.name: value}}])
+            return condition
+        return query.Bool(must_not=condition)
+
+    @check_inversion
+    def isin(self, values):
+        """Condition checking whether multiple terms are in a field's value.
+
+        Args:
+            values (list): Sequence of values to check
+        """
+        return query.Terms(self.name, value)
 
     def value_counts(self, n=10, normalize=False, missing=None, **es_kwargs):
         """Get the unique value counts for a field.
@@ -187,7 +197,7 @@ class Field(Base):
                 }
             }
         })
-        results = self.root._execute(body, size=0, **es_kwargs)
+        results = self.root.execute(body, size=0, **es_kwargs)
         results = results['aggregations'][key]
         if buckets:
             return results.get('buckets', results)
@@ -306,19 +316,19 @@ class RangeMixin(object):
 
     @check_inversion
     def __lt__(self, value):
-        return Query({'range': {self.name: {'lt': value}}})
+        return query.Range(self.name).less_than(value)
 
     @check_inversion
     def __le__(self, value):
-        return Query({'range': {self.name: {'lte': value}}})
+        return query.Range(self.name).less_than_or_equal(value)
 
     @check_inversion
     def __gt__(self, value):
-        return Query({'range': {self.name: {'gt': value}}})
+        return query.Range(self.name).greater_than(value)
 
     @check_inversion
     def __ge__(self, value):
-        return Query({'range': {self.name: {'gte': value}}})
+        return query.Range(self.name).greater_than_or_equal(value)
 
 
 class Numeric(Field, RangeMixin, AggregationMixin):
@@ -434,7 +444,7 @@ class String(Field):
         Args:
             term (str): The term being matched
         """
-        return Query({'match': {self.name: term}})
+        return query.Match(self.name, term)
 
     @check_inversion
     def regexp(self, value):
@@ -443,16 +453,19 @@ class String(Field):
         Args:
             value (str): Regular expression
         """
-        return Query({'regexp': {self.name: value}})
+        return query.Regexp(self.name, value)
 
     @check_inversion
     def contains(self, value):
         """Condition checking whether string is contained in a field's value.
 
+        This naive query is going to be significantly slower than using a
+        regexp query or a match query with analyzed fields.
+
         Args:
             value (str): String that should exist
         """
-        return Query({'wildcard': {self.name: '*{}*'.format(value)}})
+        return query.Wildcard(self.name, '*{}*'.format(value))
 
     @check_inversion
     def startswith(self, value):
@@ -461,16 +474,19 @@ class String(Field):
         Args:
             value (str): String that a field's value should start with
         """
-        return Query({'prefix': {self.name: value}})
+        return query.Prefix(self.name, value)
 
     @check_inversion
     def endswith(self, value):
         """Condition checking whether a field's value ends with a string.
 
+        This naive query is going to be significantly slower than using a
+        regexp query or a match query with analyzed fields.
+
         Args:
             value (str): String that a field's value should end with
         """
-        return Query({'wildcard': {self.name: '*{}'.format(value)}})
+        return query.Wildcard(self.name, '*{}'.format(value))
 
 
 class Date(Field, RangeMixin, AggregationMixin):
@@ -528,14 +544,3 @@ class Dummy(Field):
     """Dummy field for not implemented dtypes."""
 
     dtype = 'dummy'
-
-
-_type_mapping = {
-    'integer': Integer,
-    'float': Float,
-    'scaled_float': Decimal,
-    'keyword': String,
-    'text': String,
-    'date': Date,
-    'boolean': Boolean
-}

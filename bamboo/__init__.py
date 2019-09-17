@@ -1,10 +1,13 @@
 """Provides a pandas-style interface for Elasticsearch.
 
 Classes:
-    ElasticDataFrame: Api for elasticsearch with pandas-style
+    DataFrame: Api for elasticsearch with pandas-style
+        filtering operations
+    ElasticDataFrame (deprecated): Api for elasticsearch with pandas-style
         filtering operations
 
 Functions:
+    boost: Boosts the weight of query by a value
     config: Accepts keyward arguments as configuration parameters
 
 Exceptions:
@@ -14,15 +17,20 @@ Exceptions:
     MissingQueryError: Raise when no query has been defined
 """
 from .config import config
-from .dataframe import ElasticDataFrame
+from .dataframe import DataFrame, ElasticDataFrame
 from .exceptions import (BadOperatorError, FieldConflictError,
                          MissingMappingError, MissingQueryError)
+from .query import boost
 
 __all__ = [
-    config,
-    ElasticDataFrame,
-    BadOperatorError,
-    FieldConflictError,
-    MissingMappingError,
-    MissingQueryError
+    'DataFrame',
+    'ElasticDataFrame',
+
+    'boost',
+    'config',
+
+    'BadOperatorError',
+    'FieldConflictError',
+    'MissingMappingError',
+    'MissingQueryError'
 ]
