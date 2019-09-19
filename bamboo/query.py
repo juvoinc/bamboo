@@ -57,7 +57,7 @@ class Query(object):
         if other is None:
             return self
         if isinstance(other, Bool):
-            return NotImplemented
+            return other & Bool(must=self)
         return Bool(must=[self, other])
     __rand__ = __and__
 
@@ -65,7 +65,7 @@ class Query(object):
         if other is None:
             return self
         if isinstance(other, Bool):
-            return NotImplemented
+            return other | Bool(should=self)
         return Bool(should=[self, other])
     __ror__ = __or__
 
@@ -226,6 +226,7 @@ class Range(Query):
     """Find documents that contain terms within a provided range."""
 
     key = 'range'
+    _validation_msg = "At least one operation must be called."
 
     def __init__(self, field, boost=None):
         """Init Query.
@@ -281,6 +282,7 @@ class Range(Query):
 
     @property
     def _query(self):
+        assert self._operators, self._validation_msg
         return {
             self.key: {
                 self.field: self._operators
@@ -289,6 +291,7 @@ class Range(Query):
 
     @property
     def _boosted_query(self):
+        assert self._operators, self._validation_msg
         return {
             self.key: {
                 self.field: dict(self._operators, **{'boost': self._boost})
@@ -296,7 +299,11 @@ class Range(Query):
         }
 
     def __repr__(self):
-        return 'Range({})'.format(dict_to_params(self._operators))
+        return 'Range(field={}, boost={}, {})'.format(
+            self.field,
+            self._boost,
+            dict_to_params(self._operators),
+        )
 
 
 class Bool(Query):
@@ -324,20 +331,20 @@ class Bool(Query):
         self.params = {
             'must': must or [],
             'must_not': must_not or [],
-            'should': should or []
+            'should': should or [],
         }
         self._boost = boost
         self.__validate_params()
 
     def __repr__(self):
-        return 'Bool({})'.format(dict_to_params(self.params))
+        return 'Bool(boost={}, {})'.format(self._boost, dict_to_params(self.params))
 
     def __validate_params(self):
         """Ensure parameters are in correct format."""
         assert any(self.params.values()), self._validation_msg
-        for key, param in self.params.items():
-            if isinstance(param, Query):
-                self.params[key] = [param]
+        for key, params in self.params.items():
+            if isinstance(params, Query):
+                self.params[key] = [params]
 
     @property
     def must(self):
@@ -355,29 +362,43 @@ class Bool(Query):
         return self.params['should']
 
     def __add__(self, other):
-        params = self.merge_params(self.params, other.params)
+        """Merge the parameters of two queries into one."""
+        params = defaultdict(list, deepcopy(self.params))
+        for k, v in other.params.items():
+            params[k].extend(v)
         return Bool(**params)
 
     def __and__(self, other):
         if not isinstance(other, Bool):
-            return self + Bool(must=other)
-        if self._can_flatten_with(other):
-            return self + other
-        return Bool(must=[self, other])
+            return NotImplemented
+
+        # TODO: clean this up
+        must = self.must + other.must
+        if self.should:
+            must.append(Bool(should=self.should))
+        if other.should:
+            must.append(Bool(should=other.should))
+        if self.must_not:
+            must.append(Bool(must_not=self.must_not))
+        if other.must_not:
+            must.append(Bool(must_not=other.must_not))
+        return Bool(must=must)
 
     def __or__(self, other):
         if not isinstance(other, Bool):
-            return self + Bool(should=other)
-        if self._can_flatten_with(other):
-            return self + other
-        return Bool(should=[self, other])
+            return NotImplemented
 
-    def _can_flatten_with(self, other):
-        """Check whether it is safe to add self+other.
-
-        Used to flatten must(must(must())) to must(). Likewise with should.
-        """
-        return not set(self.filtered_params) & set(other.filtered_params)
+        # TODO: clean this up
+        should = self.should + other.should
+        if self.must:
+            should.append(Bool(must=self.must))
+        if other.must:
+            should.append(Bool(must=other.must))
+        if self.must_not:
+            should.append(Bool(must_not=self.must_not))
+        if other.must_not:
+            should.append(Bool(must_not=other.must_not))
+        return Bool(should=should)
 
     def __invert__(self):
         return Bool(
@@ -393,17 +414,19 @@ class Bool(Query):
 
     @property
     def _query(self):
-        params = self._finalize_params()
-        # if must is only parameter and contains only one condition
-        # then convert that one condition to a stand-alone query
-        if len(params.get('must', [])) == 1 == len(params):
-            return params['must'][0]
-        return {self.key: params}
+        # # if must is only parameter and contains only one condition
+        # # then convert that one condition to a stand-alone query
+        if len(self.filtered_params) == 1 == len(self.must):
+            return self.must[0]()
+        return {self.key: self._finalize_params()}
 
     @property
     def _boosted_query(self):
-        params = self._finalize_params()
-        return {self.key: dict(params, **{'boost': self._boost})}
+        # if must is only parameter and contains only one condition
+        # then convert that one condition to a stand-alone query
+        if len(self.filtered_params) == 1 == len(self.must):
+            return self.must[0].boost(self._boost)()
+        return {self.key: dict(self._finalize_params(), **{'boost': self._boost})}
 
     @property
     def filtered_params(self):
@@ -416,22 +439,6 @@ class Bool(Query):
             for key, params in self.params.items()
             if params
         }
-
-    @staticmethod
-    def merge_params(a, b):
-        """Merge the parameters of two queries into one.
-
-        Args:
-            a (dict of lists of dicts): Query parameters
-            b (dict of lists of dicts): Query parameters
-
-        Returns:
-            dict of lists of dicts: The merged query parameters
-        """
-        d = defaultdict(list, deepcopy(a))
-        for k, v in b.items():
-            d[k].extend(v)
-        return d
 
 
 class Script(Query):
@@ -451,7 +458,7 @@ class Script(Query):
         self._boost = boost
 
     def __repr__(self):
-        return 'Script(source={}, boost={})'.format(self.source, self._boost)
+        return "Script(source='{}', boost={})".format(self.source, self._boost)
 
     @property
     def _query(self):

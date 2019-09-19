@@ -207,19 +207,9 @@ def test_chained_invert(df):
         'query': {
             'bool': {
                 'must': [
-                    {
-                        'range': {
-                            'ns1.attr1': {'gt': 5}
-                        }
-                    },
-                    {
-                        'term': {'ns4.attr4': 9}
-                    }
-                ],
-                'must_not': [
-                    {
-                        'term': {'ns1.attr2': 6.0}
-                    }
+                    {'range': {'ns1.attr1': {'gt': 5}}},
+                    {'term': {'ns4.attr4': 9}},
+                    {'bool': {'must_not': [{'term': {u'ns1.attr2': 6.0}}]}}
                 ]
             }
         }
@@ -235,19 +225,9 @@ def test_chained_invert_2(df):
         'query': {
             'bool': {
                 'must': [
-                    {
-                        'range': {
-                            'ns1.attr1': {'gt': 5}
-                        }
-                    },
-                    {
-                        'term': {'ns4.attr4': 9}
-                    }
-                ],
-                'must_not': [
-                    {
-                        'term': {'ns1.attr2': 6.0}
-                    }
+                    {'range': {'ns1.attr1': {'gt': 5}}},
+                    {'term': {'ns4.attr4': 9}},
+                    {'bool': {'must_not': [{'term': {u'ns1.attr2': 6.0}}]}}
                 ]
             }
         }
@@ -904,7 +884,7 @@ def test_double_invert_or(df):
     #         'bool': {
     #             'must_not': [
     #                 {'term': {'ns1.attr1': 9}},
-    #                 {'term': {'ns1.attr1': 5.0}}
+    #                 {'term': {'ns1.attr2': 5.0}}
     #             ]
     #         }
     #     }
@@ -961,6 +941,8 @@ def test_invert_invert_and(df):
 
 
 def test_invert_invert_or(df):
+    # not a or not b
+    # a and b
     df = df[~(df.ns1.attr1 == 9) | ~(df.ns1.attr2 == 5.0)]
     df = ~df
     assert df._body == {
@@ -1003,14 +985,14 @@ def test_nested_invert(df):
         'query': {
             'bool': {
                 'must': [
+                    {'term': {u'ns1.attr1': 9}},
                     {
                         'bool': {
                             'must_not': [
                                 {'term': {u'ns1.attr2': 5.0}}
                             ]
                         }
-                    },
-                    {'term': {u'ns1.attr1': 9}},
+                    }
                 ]
             }
         }
@@ -1020,35 +1002,18 @@ def test_nested_invert(df):
 
 def test_nested_invert_or(df):
     df = df[(df.ns1.attr1 == 9) | ~(df.ns1.attr2 == 5.0)]
-    # flattened
-    # assert df._body == {
-    #     'query': {
-    #         'bool': {
-    #             'should': [
-    #                 {
-    #                     'term': {'ns1.attr1': 9}
-    #                 }
-    #             ],
-    #             'must_not': [
-    #                 {
-    #                     'term': {'ns1.attr2': 5.0}
-    #                 }
-    #             ]
-    #         }
-    #     }
-    # }
     assert df._body == {
         'query': {
             'bool': {
                 'should': [
+                    {'term': {u'ns1.attr1': 9}},
                     {
                         'bool': {
                             'must_not': [
                                 {'term': {u'ns1.attr2': 5.0}}
                             ]
                         }
-                    },
-                    {'term': {u'ns1.attr1': 9}},
+                    }
                 ]
             }
         }
@@ -1241,6 +1206,7 @@ def test_boost_chained_condition(df):
 
 
 def test_deeply_nested_query(df):
+    # a or (b and (c or not d))
     c1 = df.ns1.attr1 == 5
     c2 = df.ns1.attr2 == 8.0
     c3 = df.ns2.attr3 == True
@@ -1250,26 +1216,22 @@ def test_deeply_nested_query(df):
         'query': {
             'bool': {
                 'should': [
+                    {'term': {'ns1.attr1': 5}},
                     {
                         'bool': {
                             'must': [
+                                {'term': {'ns1.attr2': 8.0}},
                                 {
                                     'bool': {
                                         'should': [
-                                            {
-                                                'bool': {
-                                                'must_not': [{'term': {u'attr2': 6}}]
-                                                }
-                                            },
-                                            {'term': {u'ns2.attr3': True}},
+                                            {'term': {'ns2.attr3': True}},
+                                            {'bool': {'must_not': [{'term': {u'attr2': 6}}]}}
                                         ]
                                     }
-                                },
-                                {'term': {u'ns1.attr2': 8.0}}
+                                }
                             ]
                         }
-                    },
-                    {'term': {u'ns1.attr1': 5}}
+                    }
                 ]
             }
         }
@@ -1287,26 +1249,22 @@ def test_deeply_nested_query_2(df):
         'query': {
             'bool': {
                 'must': [
+                    {'term': {u'ns1.attr1': 5}},
                     {
                         'bool': {
                             'should': [
+                                {'term': {u'ns1.attr2': 8.0}},
                                 {
                                     'bool': {
                                         'must': [
-                                            {
-                                                'bool': {
-                                                    'must_not': [{'term': {u'attr2': 6}}]
-                                                }
-                                            },
                                             {'term': {u'ns2.attr3': True}},
+                                            {'bool': {'must_not': [{'term': {u'attr2': 6}}]}}
                                         ]
                                     }
-                                },
-                                {'term': {u'ns1.attr2': 8.0}},
+                                }
                             ]
                         }
-                    },
-                    {'term': {u'ns1.attr1': 5}},
+                    }
                 ]
             }
         }
@@ -1330,11 +1288,133 @@ def test_scripted_query(df):
     list(df.collect())  # assert no query error
 
 
-def test_leaking_union(df):
+def test_leaking_union():
     c1 = Bool(Term('val1', 1))
     c2 = Term('val2', 2)
     c1 | c2
     assert c1() == {'term': {'val1': 1}}
+
+
+def test_flatten():
+    c1 = Bool(should=[Term('val1', 1), Term('val3', 3)])
+    c2 = Term('val2', 2)
+    c3 = c1 | c2
+    assert c3() == {
+        'bool': {
+            'should': [
+                {'term': {'val1': 1}},
+                {'term': {'val3': 3}},
+                {'term': {'val2': 2}}
+            ]
+        }
+    }
+
+
+def test_no_flatten_if_additional_params():
+    c1 = Bool(must=[Term('val1', 1), Term('val3', 3)])
+    c2 = Term('val2', 2)
+    c3 = c1 | c2
+    assert c3() == {
+        'bool': {
+            'should': [
+                {'term': {'val2': 2}},
+                {
+                    'bool': {
+                        'must': [
+                            {'term': {'val1': 1}},
+                            {'term': {'val3': 3}}
+                        ]
+                    }
+                },
+            ]
+        }
+    }
+
+
+def test_no_flatten_if_additional_params_2():
+    c1 = Bool(should=[Term('val1', 1), Term('val3', 3)])
+    c2 = Term('val2', 2)
+    c3 = c1 & c2
+    assert c3() == {
+        'bool': {
+            'must': [
+                {'term': {'val2': 2}},
+                {
+                    'bool': {
+                        'should': [
+                            {'term': {'val1': 1}},
+                            {'term': {'val3': 3}}
+                        ]
+                    }
+                }
+            ]
+        }
+    }
+
+
+def test_no_flatten_3():
+    c1 = Bool(should=[Term('val1', 1), Term('val2', 2)])
+    c2 = Bool(should=[Term('val3', 3), Term('val4', 4)])
+    c3 = c1 & c2
+    assert c3() == {
+        'bool': {
+            'must': [
+                {
+                    'bool': {
+                        'should': [
+                            {'term': {'val1': 1}},
+                            {'term': {'val2': 2}}
+                        ]
+                    }
+                },
+                {
+                    'bool': {
+                        'should': [
+                            {'term': {'val3': 3}},
+                            {'term': {'val4': 4}}
+                        ]
+                    }
+                }
+            ]
+        }
+    }
+
+
+def test_no_flatten_4():
+    c1 = Bool(must=[Term('val1', 1), Term('val2', 2)])
+    c2 = Bool(must=[Term('val3', 3), Term('val4', 4)])
+    c3 = Bool(must=[Term('val5', 5), Term('val6', 6)])
+    c4 = c1 | c2 | c3
+    assert c4() == {
+        'bool': {
+            'should': [
+                {
+                    'bool': {
+                        'must': [
+                            {'term': {'val1': 1}},
+                            {'term': {'val2': 2}}
+                        ]
+                    }
+                },
+                {
+                    'bool': {
+                        'must': [
+                            {'term': {'val3': 3}},
+                            {'term': {'val4': 4}}
+                        ]
+                    }
+                },
+                {
+                    'bool': {
+                        'must': [
+                            {'term': {'val5': 5}},
+                            {'term': {'val6': 6}}
+                        ]
+                    }
+                }
+            ]
+        }
+    }
 
 
 def test_isin(df):
@@ -1443,3 +1523,111 @@ def test_and_with_inner_and(df):
     }}
     assert df.execute({'query': query}, size=1)
 
+
+def test_order_indifferent(df):
+    x = Bool(must=Term(1,1), must_not=Term(2,2))
+    y = Bool(must=Term(3,3))
+    a = (x & y)()
+    b = (y & x)()
+    assert a['bool']['must'][0] == b['bool']['must'][1]
+    assert a['bool']['must'][1] == b['bool']['must'][0]
+
+
+def test_order_indifferent_2(df):
+    x = df.ns2.attr3 == True
+    y = df.attr2 == 6
+    a = df[x | ~y]._query()
+    b = df[~y | x]._query()
+    assert a['bool'] == b['bool']
+
+
+def test_disjunction_is_associative():
+    x = Bool(must=[Term(1,1), Term(2,2)])
+    y = Bool(should=[Term(3,3), Term(4,4)])
+    z = x | y
+    # flatten
+    assert z() == {'bool': {'should': [
+        {'term': {3: 3}},
+        {'term': {4: 4}},
+        {'bool': {'must': [
+            {'term': {1: 1}},
+            {'term': {2: 2}}
+        ]}},
+    ]}}
+    # assert z() == {'bool': {'should': [
+    #     {'bool': {'must': [
+    #         {'term': {1: 1}},
+    #         {'term': {2: 2}}
+    #     ]}},
+    #     {'bool': {'should': [
+    #         {'term': {3: 3}},
+    #         {'term': {4: 4}}
+    #     ]}}
+    # ]}}
+
+
+def test_bool_and_must_not_not_combined():
+    # (a and not b) and not c
+    # a and not (b or c)
+    # a and not b and not c
+    x = Bool(must=Term(1,1), must_not=Term(2,2))
+    y = Bool(must_not=Term(3,3))
+    z = x & y
+    # flattened
+    # assert z() == {'bool': {
+    #     'must': [{'term': {1: 1}}],
+    #     'must_not': [
+    #         {'term': {2: 2}},
+    #         {'term': {3: 3}}
+    #     ],
+    # }}
+    # assert z() == {'bool': {'must': [
+    #     {'bool': {
+    #         'must_not': [{'term': {2: 2}}],
+    #         'must': [{'term': {1: 1}}]
+    #     }},
+    #     {'bool': {'must_not': [{'term': {3: 3}}]}}
+    # ]}}
+    assert z() == {'bool': {'must': [
+        {'term': {1: 1}},
+        {'bool': {'must_not': [{'term': {2: 2}}]}},
+        {'bool': {'must_not': [{'term': {3: 3}}]}}
+    ]}}
+
+
+def test_boosted_flattened_bool():
+    x = boost(Bool(Term(1, 1)), 2.0)
+    y = boost(Term(1, 1), 2.0)
+    assert x() == y()
+
+
+def test_combined_inverts_and():
+    # (not x and y) and not z
+    x = Bool(must_not=[Term(1,1)])
+    y = Bool(must=Term(2,2))
+    z = Bool(must_not=Term(3,3))
+    a = x & y
+    b = a & z
+    assert b() == {'bool': {'must': [
+        {'term': {2: 2}},
+        {'bool': {'must_not': [{'term': {1: 1}}]}},
+        {'bool': {'must_not': [{'term': {3: 3}}]}}
+    ]}}
+
+
+def test_combined_inverts_or():
+    # (not x and y) or not z
+    x = Bool(must_not=[Term(1,1)])
+    y = Bool(must=Term(2,2))
+    z = Bool(must_not=Term(3,3))
+    a = x & y
+    b = a | z
+    assert b() == {'bool': {
+        'should': [
+            {'bool': {'must': [
+                {'term': {2: 2}},
+                {'bool': {'must_not': [{'term': {1: 1}}]}}
+            ]}},
+            {'bool': {'must_not': [{'term': {3: 3}}]}}
+        ]
+    }}
