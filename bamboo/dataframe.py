@@ -43,7 +43,27 @@ class DataFrame(OrmMixin):
         return self.config.connection
 
     def __repr__(self):
+        df = self.__pandas_100()
+        if df is not None:
+            return repr(df)
         return '{}({})'.format(type(self).__name__, self.index)
+
+    def _repr_html_(self):
+        """Return an html representation for a particular DataFrame.
+
+        Mainly for IPython notebook.
+        """
+        df = self.__pandas_100()
+        if df is not None:
+            return df._repr_html_()
+        return None
+
+    def __pandas_100(self):
+        frame = self if self._limit else self.limit(100)
+        try:
+            return frame.to_pandas()
+        except ImportError:
+            pass
 
     def __getitem__(self, item):
         if isinstance(item, basestring):
