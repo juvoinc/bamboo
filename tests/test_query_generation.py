@@ -1330,6 +1330,13 @@ def test_scripted_query(df):
     list(df.collect())  # assert no query error
 
 
+def test_leaking_union(df):
+    c1 = Bool(Term('val1', 1))
+    c2 = Term('val2', 2)
+    c1 | c2
+    assert c1() == {'term': {'val1': 1}}
+
+
 def test_isin(df):
     df = df[df.ns1.attr1.isin([1, 10])]
     assert df._body == {'query': {'terms': {'ns1.attr1': [1, 10]}}}
@@ -1435,3 +1442,4 @@ def test_and_with_inner_and(df):
         ]
     }}
     assert df.execute({'query': query}, size=1)
+

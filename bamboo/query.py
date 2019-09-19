@@ -428,7 +428,7 @@ class Bool(Query):
         Returns:
             dict of lists of dicts: The merged query parameters
         """
-        d = defaultdict(list, a)
+        d = defaultdict(list, deepcopy(a))
         for k, v in b.items():
             d[k].extend(v)
         return d
