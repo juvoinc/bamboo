@@ -3,7 +3,7 @@ from setuptools import setup
 
 setup(
     name='bamboo',
-    version='0.2.2',
+    version='0.2.3',
     author='Aaron Mangum',
     author_email='aaron.mangum@juvo.com',
     url='https://github.com/juvoinc/bamboo',

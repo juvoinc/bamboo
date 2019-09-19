@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.3]
+
+### Fixed
+
+- Bug in certain nested conditions.
+
 ## [0.2.2]
 
 ### Added
@@ -15,7 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Bug where conditions would leak between bool query types
+- Bug where conditions would leak between bool query types.
+- Bug where an inversion in root order of operations could result in different query.
 
 ## [0.2.1]
 
