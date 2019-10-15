@@ -523,7 +523,8 @@ class Date(Field, RangeMixin, AggregationMixin):
         @wraps(func)
         def wrapper(obj, *args, **kwargs):
             result = func(obj, *args, **kwargs)
-            return datetime.fromtimestamp(result / 1000)
+            if result:
+                return datetime.fromtimestamp(result / 1000)
         return wrapper
 
     average = _epoch_to_dt(AggregationMixin.average.__func__)
