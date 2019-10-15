@@ -126,3 +126,10 @@ def test_date_stats(df):
         'max_as_string': '2019-07-15T11:35:55.713', 'avg_as_string': '2019-07-05T23:41:58.571',
         'avg': 1562370118571.0
     }
+
+
+def test_date_agg_on_no_matches(df):
+    df = df[df.attr2 > 10]
+    assert df.count() == 0
+    avg = df.ns3.test_date.average()
+    assert avg == None
