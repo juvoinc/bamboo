@@ -508,12 +508,12 @@ class Date(Field, RangeMixin, AggregationMixin):
                 return func(obj, delta)
             return wrapper
 
-        __eq__ = age_to_dt(Field.__eq__.__func__)
-        __ne__ = age_to_dt(Field.__ne__.__func__)
-        __lt__ = age_to_dt(RangeMixin.__gt__.__func__)
-        __le__ = age_to_dt(RangeMixin.__ge__.__func__)
-        __gt__ = age_to_dt(RangeMixin.__lt__.__func__)
-        __ge__ = age_to_dt(RangeMixin.__le__.__func__)
+        __eq__ = age_to_dt(Field.__eq__)
+        __ne__ = age_to_dt(Field.__ne__)
+        __lt__ = age_to_dt(RangeMixin.__gt__)
+        __le__ = age_to_dt(RangeMixin.__ge__)
+        __gt__ = age_to_dt(RangeMixin.__lt__)
+        __ge__ = age_to_dt(RangeMixin.__le__)
 
     @property
     def age(self):
@@ -528,9 +528,9 @@ class Date(Field, RangeMixin, AggregationMixin):
                 return datetime.fromtimestamp(result / 1000)
         return wrapper
 
-    average = _epoch_to_dt(AggregationMixin.average.__func__)
-    max = _epoch_to_dt(AggregationMixin.max.__func__)
-    min = _epoch_to_dt(AggregationMixin.min.__func__)
+    average = _epoch_to_dt(AggregationMixin.average)
+    max = _epoch_to_dt(AggregationMixin.max)
+    min = _epoch_to_dt(AggregationMixin.min)
 
     def histogram(self, interval=50, min_doc_count=1):
         """Get a count of values for a field bucketed by interval.
