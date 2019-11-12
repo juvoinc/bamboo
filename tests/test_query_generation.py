@@ -701,7 +701,8 @@ def test_age_query(df):
     dt = df._body['query']['range']['ns3.test_date']['lte']
     expected = date.today() - timedelta(days=days)
     assert dt.date() == expected
-    list(df.collect())  # assert no query error
+    matches = list(df.collect())
+    assert len(matches) == 3
 
 
 def test_age_query_inverted(df):
@@ -709,7 +710,8 @@ def test_age_query_inverted(df):
     df = ~df[df.ns3.test_date.age >= days]
     # test does not raise key error
     df._body['query']['bool']['must_not'][0]['range']['ns3.test_date']['lte']
-    list(df.collect())  # assert no query error
+    matches = list(df.collect())
+    assert len(matches) == 14
 
 
 def test_age_query_inverted_2(df):
@@ -717,7 +719,10 @@ def test_age_query_inverted_2(df):
     df = df[~df.ns3.test_date.age >= days]
     # test does not raise key error
     df._body['query']['bool']['must_not'][0]['range']['ns3.test_date']['lte']
-    list(df.collect())  # assert no query error
+    x = list(df.collect())  # assert no query error
+    matches = list(df.collect())
+    assert len(matches) == 14
+
 
 
 def test_exists_query(df):
