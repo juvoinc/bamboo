@@ -151,13 +151,15 @@ class DataFrame(OrmMixin):
             return {'query': {'match_all': {}}}
         return {'query': self._query()}
 
-    def execute(self, body, size, fields=None, preserve_order=False, **es_kwargs):
+    def execute(self, body, size=None, fields=None,
+                preserve_order=False, **es_kwargs):
         """Execute elasticsearch query.
 
         Args:
             body (dict): Query body in json format
-            size (int): The number of results to return. If None then
-                returns a generator scan of the entire index.
+            size (int, optional): The number of results to return.
+                 If None then returns a generator scan of the entire index.
+                 Defaults to None.
             fields (List[str], optional): The fields to include in the document
                 _source in the return results. Defaults to None.
             preserve_order (bool, optional): Whether to return the results
