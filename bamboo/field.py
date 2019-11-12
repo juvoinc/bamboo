@@ -292,7 +292,8 @@ class AggregationMixin(object):
 
         Args:
             interval (number, optional): Bin size for counts. Defaults to 50.
-            min_doc_count (int, optional):
+            min_doc_count (int, optional): Minimum number of documents for
+                a bin to show up.
             missing (num, optional): How documents that are missing a
                 value should be treated. Defaults to ignore.
 
