@@ -1,6 +1,6 @@
 # Bamboo
 
-Bamboo is high-level api for ElasticSearch that uses a pandas-style interface for querying and aggregations. It was created to provide data scientists and other developers a means of interacting with ElasticSearch without having to learn its complicated and unfamilar query language.
+Bamboo is a high-level api for ElasticSearch that uses a pandas-style interface for querying and aggregations. It was created to provide data scientists and other developers a means of interacting with ElasticSearch without having to learn its cumbersome query language.
 
 DataFrame attributes are created dynamically from field names at initialization time. This allows the team in charge of updating an index or its mapping to be separate from the team using the index for analytics. This can be a significant boon for indices with frequently changing mapping definitions.
 
@@ -153,7 +153,7 @@ Namespace(account)
 
 ### Querying
 
-Generally, filter according to conditions works the same as you would use in Pandas.
+Generally, filtering works the same as you would use in Pandas.
 
 Autocomplete works for field names. You can type period then tab (or whatever key mapping your IDE supports) and the available fields will be listed.
 
