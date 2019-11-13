@@ -44,7 +44,7 @@ Connection parameters for ElasticSearch and Bamboo can be set several ways.
 
 #### Helper function
 
-The helper function only needs to be called once. After that, its state will persist throughout your session. It accepts the same parameters as the low-level ElasticSearch api.
+The helper function only needs to be called once. After that, its state will persist throughout your session. It accepts the same parameters as the low-level ElasticSearch api. If no config is declared then Bamboo will use the default ElasticSearch settings, i.e., 'localhost'.
 
 ```python
 >>> from bamboo import config, DataFrame
@@ -58,7 +58,7 @@ The helper function only needs to be called once. After that, its state will per
 
 #### Directly passing to dataframe
 
-If different dataframes needs different credentials then a config file can be passed directly to the dataframe during initialization. If no configuration is specified then it will use the default ElasticSearch low-level api settings. I.e., 'localhost'.
+If different dataframes needs different credentials then a config object can be passed directly to the dataframe during initialization. Otherwise, it uses the global config defined above.
 
 ```python
 >>> from bamboo.config import Config
