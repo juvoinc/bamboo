@@ -192,6 +192,38 @@ Autocomplete works for field names. You can type period then tab (or whatever ke
 >>> df[boost(adult, 2.0) & boost(cat, 1.5)]
 ```
 
+#### Filter
+
+The filter parameter from ElasticSearch's bool query is made available as a DataFrame method. This filters out any documents that do not match any of the conditions sent to the filter parameter. However, matches to these conditions do not contribute to the overall score of a document.
+
+```python
+# matching a single condition
+>>> df = df[df.is_cat==True]
+>>> list(df.collect(include_score=True))
+[{'_score': 1.0,
+  'name': 'Purrrnest Hemingway',
+  'is_cat': True}]
+
+# filtering a single condition
+>>> df = df.filter(df.is_cat==True)
+>>> list(df.collect(include_score=True))
+[{'_score': 0.0,
+  'name': 'Purrrnest Hemingway',
+  'is_cat': True}]
+
+# filtering multiple conditions
+>>> df = df.filter(df.is_cat==True, df.age=4)
+
+# combining matching and filters
+>>> df = df[df.is_cat==True]
+>>> df = df.filter(df.age==4)
+
+# filtering on boolean conditions
+>>> adult = df.age > 21
+>>> cat = df.is_cat == True
+>>> df = df.filter(adult | cat)
+```
+
 #### Supported operators
 
 | Operator  | Field Type    | Description              |
@@ -266,7 +298,7 @@ One more method that is supported by all data types is `.isin`. You can use this
 
 # only return certain fields
 >>> df('document_id', fields=['name'])
-{'name': 'ernie'}
+{'name': 'Purrrnest Hemingway'}
 
 # get a random document
 >>> df.take(1)

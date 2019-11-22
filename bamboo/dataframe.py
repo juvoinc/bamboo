@@ -6,7 +6,7 @@ from elasticsearch.helpers import scan
 from .config import config
 from .exceptions import BadOperatorError, MissingQueryError
 from .orm import OrmMixin
-from .query import Query, Script
+from .query import Bool, Query, Script
 
 
 class DataFrame(OrmMixin):
@@ -142,6 +142,20 @@ class DataFrame(OrmMixin):
         """
         new = deepcopy(self)
         new._limit = n
+        return new
+
+    def filter(self, *conditions):
+        """Each condition must appear in matching documents.
+
+        Args:
+            *conditions (query): Query conditions that will be matched
+
+        This does not contribute to scoring.
+        """
+        new = deepcopy(self)
+        if any(isinstance(i, DataFrame) for i in conditions):
+            raise TypeError(DataFrame)
+        new._query = Bool(filter=conditions) + new._query
         return new
 
     @property

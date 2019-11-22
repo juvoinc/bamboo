@@ -1018,7 +1018,7 @@ def test_nested_invert_or(df):
                                 {'term': {u'ns1.attr2': 5.0}}
                             ]
                         }
-                    }
+                    },
                 ]
             }
         }
@@ -1322,7 +1322,6 @@ def test_no_flatten_if_additional_params():
     assert c3() == {
         'bool': {
             'should': [
-                {'term': {'val2': 2}},
                 {
                     'bool': {
                         'must': [
@@ -1331,6 +1330,7 @@ def test_no_flatten_if_additional_params():
                         ]
                     }
                 },
+                {'term': {'val2': 2}},
             ]
         }
     }
@@ -1343,7 +1343,6 @@ def test_no_flatten_if_additional_params_2():
     assert c3() == {
         'bool': {
             'must': [
-                {'term': {'val2': 2}},
                 {
                     'bool': {
                         'should': [
@@ -1351,7 +1350,8 @@ def test_no_flatten_if_additional_params_2():
                             {'term': {'val3': 3}}
                         ]
                     }
-                }
+                },
+                {'term': {'val2': 2}},
             ]
         }
     }
@@ -1529,35 +1529,18 @@ def test_and_with_inner_and(df):
     assert df.execute({'query': query}, size=1)
 
 
-def test_order_indifferent(df):
-    x = Bool(must=Term(1,1), must_not=Term(2,2))
-    y = Bool(must=Term(3,3))
-    a = (x & y)()
-    b = (y & x)()
-    assert a['bool']['must'][0] == b['bool']['must'][1]
-    assert a['bool']['must'][1] == b['bool']['must'][0]
-
-
-def test_order_indifferent_2(df):
-    x = df.ns2.attr3 == True
-    y = df.attr2 == 6
-    a = df[x | ~y]._query()
-    b = df[~y | x]._query()
-    assert a['bool'] == b['bool']
-
-
 def test_disjunction_is_associative():
     x = Bool(must=[Term(1,1), Term(2,2)])
     y = Bool(should=[Term(3,3), Term(4,4)])
     z = x | y
     # flatten
     assert z() == {'bool': {'should': [
-        {'term': {3: 3}},
-        {'term': {4: 4}},
         {'bool': {'must': [
             {'term': {1: 1}},
             {'term': {2: 2}}
         ]}},
+        {'term': {3: 3}},
+        {'term': {4: 4}},
     ]}}
     # assert z() == {'bool': {'should': [
     #     {'bool': {'must': [
@@ -1614,8 +1597,8 @@ def test_combined_inverts_and():
     a = x & y
     b = a & z
     assert b() == {'bool': {'must': [
-        {'term': {2: 2}},
         {'bool': {'must_not': [{'term': {1: 1}}]}},
+        {'term': {2: 2}},
         {'bool': {'must_not': [{'term': {3: 3}}]}}
     ]}}
 
@@ -1630,9 +1613,270 @@ def test_combined_inverts_or():
     assert b() == {'bool': {
         'should': [
             {'bool': {'must': [
+                {'bool': {'must_not': [{'term': {1: 1}}]}},
                 {'term': {2: 2}},
-                {'bool': {'must_not': [{'term': {1: 1}}]}}
             ]}},
             {'bool': {'must_not': [{'term': {3: 3}}]}}
         ]
     }}
+
+
+def test_filter(df):
+    df = df.filter(df.ns1.attr1==5)
+    assert df._body == {
+        'query': {
+            'bool': {
+                'filter': [
+                    {
+                        'term': {'ns1.attr1': 5}
+                    }
+                ]
+            }
+        }
+    }
+    list(df.collect())  # assert no query error
+
+
+def test_filter_multiple(df):
+    df = df.filter(df.ns1.attr1==5, df.ns1.attr2==8.0)
+    assert df._body == {
+        'query': {
+            'bool': {
+                'filter': [
+                    {
+                        'term': {'ns1.attr1': 5}
+                    },
+                    {
+                        'term': {'ns1.attr2': 8.0}
+                    },
+                ]
+            }
+        }
+    }
+    list(df.collect())  # assert no query error
+
+
+def test_filter_plus_conditions(df):
+    df = df[df.ns1.attr1==5]
+    df = df.filter(df.ns1.attr2==8.0)
+    assert df._body == {
+        'query': {
+            'bool': {
+                'must': [
+                    {
+                        'term': {'ns1.attr1': 5}
+                    }
+                ],
+                'filter': [
+                    {
+                        'term': {'ns1.attr2': 8.0}
+                    }
+                ]
+            }
+        }
+    }
+    list(df.collect())  # assert no query error
+
+
+def test_outer_invert_filter(df):
+    df = ~df.filter(df.ns1.attr1==5)
+    assert df._body == {
+        'query': {
+            'bool': {
+                'should': [
+                    {
+                        'bool': {
+                            'must_not': [
+                                {'term': {u'ns1.attr1': 5}}
+                            ]
+                        }
+                    }
+                ]
+            }
+        }
+    }
+    list(df.collect())  # assert no query error
+
+
+def test_inner_invert_filter(df):
+    df = df.filter(~df.ns1.attr1==5)
+    assert df._body == {
+        'query': {
+            'bool': {
+                'filter': [
+                    {
+                        'bool': {
+                            'must_not': [
+                                {'term': {u'ns1.attr1': 5}}
+                            ]
+                        }
+                    }
+                ]
+            }
+        }
+    }
+    list(df.collect())  # assert no query error
+
+
+
+def test_filtered_or(df):
+    df = df.filter((df.ns1.attr1 == 5) | (df.ns1.attr2 == 8.0))
+    assert df._body == {
+        'query': {
+            'bool': {
+                'filter': [
+                    {
+                        'bool': {
+                            'should': [
+                                {
+                                    'term': {'ns1.attr1': 5}
+                                },
+                                {
+                                    'term': {'ns1.attr2': 8.0}
+                                },
+                            ]
+                        }
+                    }
+                ]
+            }
+        }
+    }
+    list(df.collect())  # assert no query error
+
+
+def test_filtered_on_self_raises(df):
+    df = df[df.ns1.attr1 == 5]
+    with pytest.raises(TypeError):
+        df.filter(df)
+
+
+def test_and_filter(df):
+    df = df.filter(df.ns1.attr1==5) & df.filter(df.ns1.attr2==8.0)
+    assert df._body == {
+        'query': {
+            'bool': {
+                'must': [
+                    {
+                        'bool': {
+                            'filter': [
+                                {
+                                    'term': {'ns1.attr1': 5}
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        'bool': {
+                            'filter': [
+                                {
+                                    'term': {'ns1.attr2': 8.0}
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        }
+    }
+    list(df.collect())  # assert no query error
+
+
+def test_or_filter(df):
+    df = df.filter(df.ns1.attr1==5) | df.filter(df.ns1.attr2==8.0)
+    assert df._body == {
+        'query': {
+            'bool': {
+                'should': [
+                    {
+                        'bool': {
+                            'filter': [
+                                {
+                                    'term': {'ns1.attr1': 5}
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        'bool': {
+                            'filter': [
+                                {
+                                    'term': {'ns1.attr2': 8.0}
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        }
+    }
+    list(df.collect())  # assert no query error
+
+
+def test_or_filter_plus_conditions(df):
+    df1 = df[df.ns1.attr1==5]
+    df = df1.filter(df.ns1.attr1==5) | df.filter(df.ns1.attr2==8.0)
+    assert df._body == {
+        'query': {
+            'bool': {
+                'should': [
+                    {
+                        'bool': {
+                            'filter': [
+                                {
+                                    'term': {'ns1.attr1': 5}
+                                },
+                            ]
+                        }
+                    },
+                    {
+                        'term': {'ns1.attr1': 5}
+                    },
+                    {
+                        'bool': {
+                            'filter': [
+                                {
+                                    'term': {'ns1.attr2': 8.0}
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        }
+    }
+    list(df.collect())  # assert no query error
+
+
+def test_and_filter_plus_conditions(df):
+    df1 = df[df.ns1.attr1==5]
+    df = df1.filter(df.ns1.attr1==5) & df.filter(df.ns1.attr2==8.0)
+    assert df._body == {
+        'query': {
+            'bool': {
+                'must': [
+                    {
+                        'term': {'ns1.attr1': 5}
+                    },
+                    {
+                        'bool': {
+                            'filter': [
+                                {
+                                    'term': {'ns1.attr1': 5}
+                                },
+                            ]
+                        }
+                    },
+                    {
+                        'bool': {
+                            'filter': [
+                                {
+                                    'term': {'ns1.attr2': 8.0}
+                                },
+                            ]
+                        }
+                    },
+                ]
+            }
+        }
+    }
+    list(df.collect())  # assert no query error

@@ -57,7 +57,7 @@ class Query(object):
         if other is None:
             return self
         if isinstance(other, Bool):
-            return other & Bool(must=self)
+            return Bool(must=self) & other
         return Bool(must=[self, other])
     __rand__ = __and__
 
@@ -65,7 +65,7 @@ class Query(object):
         if other is None:
             return self
         if isinstance(other, Bool):
-            return other | Bool(should=self)
+            return Bool(should=self) | other
         return Bool(should=[self, other])
     __ror__ = __or__
 
@@ -316,23 +316,34 @@ class Bool(Query):
     key = 'bool'
     _validation_msg = 'At least one initialization parameter must be supplied.'
 
-    def __init__(self, must=None, must_not=None, should=None, boost=None):
+    def __init__(self, must=None, filter=None, must_not=None, should=None, boost=None):
         """Init Bool.
 
         Args:
-            must (list): A list of queries that must exist
-            must_not (list): A list of queries that must not exist
-            should (list): A list of queries that do not have to exist
-                but affect scoring/sorting
+            must (list): The clause (query) must appear in matching documents
+                and will contribute to the score.
+            filter (list): The clause (query) must appear in matching
+                documents. However unlike must the score of the query
+                will be ignored. Scoring is ignored.
+            should (list): The clause (query) should appear in the matching
+                document. If the bool query has a must or filter clause
+                then a document will match the bool query even if none of
+                the should queries match. In this case these clauses are
+                only used to influence the score. If the bool query has
+                neither must or filter then at least one of the should
+                queries must match a document for it to match the bool
+                query.
+            must_not (list): The clause (query) must not appear in the
+                matching documents. Scoring is ignored.
             boost (float, optional): Weight given to this query.
                 Default None.
         """
-        # TODO: add filter param
-        self.params = {
-            'must': must or [],
-            'must_not': must_not or [],
-            'should': should or [],
-        }
+        self.params = dict(
+            must=must or [],
+            filter=filter or [],
+            should=should or [],
+            must_not=must_not or []
+        )
         self._boost = boost
         self.__validate_params()
 
@@ -345,6 +356,8 @@ class Bool(Query):
         for key, params in self.params.items():
             if isinstance(params, Query):
                 self.params[key] = [params]
+            elif not isinstance(params, list):
+                self.params[key] = list(params)
 
     @property
     def must(self):
@@ -361,8 +374,18 @@ class Bool(Query):
         """Get the should conditions."""
         return self.params['should']
 
+    @property
+    def filter(self):
+        """Get the filter conditions."""
+        return self.params['filter']
+
     def __add__(self, other):
         """Merge the parameters of two queries into one."""
+        if other is None:
+            return self
+        if not isinstance(other, Bool):
+            other = Bool(must=other)
+
         params = defaultdict(list, deepcopy(self.params))
         for k, v in other.params.items():
             params[k].extend(v)
@@ -370,40 +393,46 @@ class Bool(Query):
 
     def __and__(self, other):
         if not isinstance(other, Bool):
-            return NotImplemented
-
-        # TODO: clean this up
-        must = self.must + other.must
-        if self.should:
-            must.append(Bool(should=self.should))
-        if other.should:
-            must.append(Bool(should=other.should))
-        if self.must_not:
-            must.append(Bool(must_not=self.must_not))
-        if other.must_not:
-            must.append(Bool(must_not=other.must_not))
-        return Bool(must=must)
+            other = Bool(must=other)
+        return Bool(must=self.explode('must') + other.explode('must'))
 
     def __or__(self, other):
         if not isinstance(other, Bool):
-            return NotImplemented
+            other = Bool(should=other)
+        return Bool(should=self.explode('should') + other.explode('should'))
 
-        # TODO: clean this up
-        should = self.should + other.should
-        if self.must:
-            should.append(Bool(must=self.must))
-        if other.must:
-            should.append(Bool(must=other.must))
-        if self.must_not:
-            should.append(Bool(must_not=self.must_not))
-        if other.must_not:
-            should.append(Bool(must_not=other.must_not))
-        return Bool(should=should)
+    def explode(self, destination):
+        """Explode all parameters into individual Bool queries.
+
+        This is used for boolean logic operations between two Bool queries.
+        Parameters named by `destination` are left as is.
+
+        Example:
+            >>> self
+            Bool(must=[Term('attr', 1), should=[Term('attr', 2)], must_not=[Term('attr', 3)])
+            >>> self.compress('should')
+            [Term('attr', 2),
+             Bool(must=[Term('attr', 1)],
+             Bool(must_not=[Term('attr', 3)]
+
+        Args:
+            destination (str): The parameter that all other paremeters
+                are converted to
+
+        Returns:
+            List[Bool]: List of Bool queries which were previously the
+                objects individual parameters
+        """
+        params = self.filtered_params
+        compressed = params.pop(destination, [])
+        for name, clauses in params.items():
+            compressed.append(Bool(**{name: clauses}))
+        return compressed
 
     def __invert__(self):
         return Bool(
             must=[self.__negate(i) for i in self.should] + self.must_not,
-            should=[self.__negate(i) for i in self.must]
+            should=[self.__negate(i) for i in self.must + self.filter]
         )
 
     def __negate(self, query):
