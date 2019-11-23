@@ -147,10 +147,13 @@ class DataFrame(OrmMixin):
     def filter(self, *conditions):
         """Each condition must appear in matching documents.
 
+        This does not contribute to scoring.
+
         Args:
             *conditions (query): Query conditions that will be matched
 
-        This does not contribute to scoring.
+        Returns:
+            DataFrame: DataFrame with filter applied.
         """
         new = deepcopy(self)
         if any(isinstance(i, DataFrame) for i in conditions):
