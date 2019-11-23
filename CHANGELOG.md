@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Filter parameter in bool query
 
+### Fixed
+
+- Raw query body is no longer symmetric, but instead follows the original order of conditions
+
 ## [0.2.5]
 
 ### Added
