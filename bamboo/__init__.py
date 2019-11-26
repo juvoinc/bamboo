@@ -20,7 +20,7 @@ from .config import config
 from .dataframe import DataFrame, ElasticDataFrame
 from .exceptions import (BadOperatorError, FieldConflictError,
                          MissingMappingError, MissingQueryError)
-from .query import boost
+from .queries import boost
 
 __all__ = [
     'DataFrame',

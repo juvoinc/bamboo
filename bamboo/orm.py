@@ -6,7 +6,7 @@ Works with dynamic and static mappings.
 from abc import ABCMeta
 from collections import defaultdict
 
-from . import field
+from . import fields
 from .exceptions import FieldConflictError, MissingMappingError
 
 
@@ -21,13 +21,13 @@ class OrmMixin(object):
 
     __metaclass__ = ABCMeta
     _type_mapping = {
-        'integer': field.Integer,
-        'float': field.Float,
-        'scaled_float': field.Decimal,
-        'keyword': field.String,
-        'text': field.String,
-        'date': field.Date,
-        'boolean': field.Boolean
+        'integer': fields.Integer,
+        'float': fields.Float,
+        'scaled_float': fields.Decimal,
+        'keyword': fields.String,
+        'text': fields.String,
+        'date': fields.Date,
+        'boolean': fields.Boolean
     }
 
     @property
@@ -35,14 +35,14 @@ class OrmMixin(object):
         """Fields that exist within an index at a root level."""
         return [i._name
                 for i in vars(self).values()
-                if isinstance(i, field.Field)]
+                if isinstance(i, fields.Field)]
 
     @property
     def namespaces(self):
         """Namespaces that exist within an index at a root level."""
         return [i._name
                 for i in vars(self).values()
-                if isinstance(i, field.Namespace)]
+                if isinstance(i, fields.Namespace)]
 
     @property
     def dtypes(self):
@@ -56,9 +56,9 @@ class OrmMixin(object):
         for k, v in vars(obj).items():
             if k == 'parent':
                 continue
-            if isinstance(v, field.Field):
+            if isinstance(v, fields.Field):
                 dtypes[v._name] = v.dtype
-            elif isinstance(v, field.Namespace):
+            elif isinstance(v, fields.Namespace):
                 dtypes[v._name].update(OrmMixin.__dtypes(v))
         return dict(dtypes)
 
@@ -98,18 +98,18 @@ class OrmMixin(object):
     def __create_namespace(self, name, namespace):
         """Create a namespace and adds it as an object attribute."""
         if namespace is not None:
-            ns = field.Namespace(name, namespace)
+            ns = fields.Namespace(name, namespace)
             setattr(namespace, name, ns)
         elif hasattr(self, name):
             raise FieldConflictError(name)
         else:
-            ns = field.Namespace(name, self)
+            ns = fields.Namespace(name, self)
             setattr(self, name, ns)
         return ns
 
     def __add_field(self, name, dtype, namespace):
         """Create a field and adds it as an object attribute."""
-        Field = self._type_mapping.get(dtype, field.Dummy)
+        Field = self._type_mapping.get(dtype, fields.Dummy)
         if namespace is not None:
             f = Field(name, namespace)
             setattr(namespace, name, f)

@@ -5,7 +5,7 @@ from copy import deepcopy
 from datetime import datetime, timedelta
 from functools import wraps
 
-from . import query
+from . import queries
 
 
 def check_inversion(func):
@@ -14,7 +14,7 @@ def check_inversion(func):
     def wrapper(obj, *args, **kwargs):
         condition = func(obj, *args, **kwargs)
         if obj._inverted is True:
-            condition = query.Bool(must_not=condition)
+            condition = queries.Bool(must_not=condition)
         return condition
     return wrapper
 
@@ -70,7 +70,7 @@ class Base(object):
     @check_inversion
     def exists(self):
         """Condition checking whether the field exists."""
-        return query.Exists(self.name)
+        return queries.Exists(self.name)
 
 
 class Namespace(Base):
@@ -105,13 +105,13 @@ class Field(Base):
 
     @check_inversion
     def __eq__(self, value):
-        return query.Term(self.name, value)
+        return queries.Term(self.name, value)
 
     def __ne__(self, value):
-        condition = query.Term(self.name, value)
+        condition = queries.Term(self.name, value)
         if self._inverted:
             return condition
-        return query.Bool(must_not=condition)
+        return queries.Bool(must_not=condition)
 
     @check_inversion
     def isin(self, values):
@@ -120,7 +120,7 @@ class Field(Base):
         Args:
             values (list): Sequence of values to check
         """
-        return query.Terms(self.name, values)
+        return queries.Terms(self.name, values)
 
     def value_counts(self, n=10, normalize=False, missing=None, **es_kwargs):
         """Get the unique value counts for a field.
@@ -317,19 +317,19 @@ class RangeMixin(object):
 
     @check_inversion
     def __lt__(self, value):
-        return query.Range(self.name).less_than(value)
+        return queries.Range(self.name).less_than(value)
 
     @check_inversion
     def __le__(self, value):
-        return query.Range(self.name).less_than_or_equal(value)
+        return queries.Range(self.name).less_than_or_equal(value)
 
     @check_inversion
     def __gt__(self, value):
-        return query.Range(self.name).greater_than(value)
+        return queries.Range(self.name).greater_than(value)
 
     @check_inversion
     def __ge__(self, value):
-        return query.Range(self.name).greater_than_or_equal(value)
+        return queries.Range(self.name).greater_than_or_equal(value)
 
 
 class Numeric(Field, RangeMixin, AggregationMixin):
@@ -445,7 +445,7 @@ class String(Field):
         Args:
             term (str): The term being matched
         """
-        return query.Match(self.name, term)
+        return queries.Match(self.name, term)
 
     @check_inversion
     def regexp(self, value):
@@ -454,7 +454,7 @@ class String(Field):
         Args:
             value (str): Regular expression
         """
-        return query.Regexp(self.name, value)
+        return queries.Regexp(self.name, value)
 
     @check_inversion
     def contains(self, value):
@@ -466,7 +466,7 @@ class String(Field):
         Args:
             value (str): String that should exist
         """
-        return query.Wildcard(self.name, '*{}*'.format(value))
+        return queries.Wildcard(self.name, '*{}*'.format(value))
 
     @check_inversion
     def startswith(self, value):
@@ -475,7 +475,7 @@ class String(Field):
         Args:
             value (str): String that a field's value should start with
         """
-        return query.Prefix(self.name, value)
+        return queries.Prefix(self.name, value)
 
     @check_inversion
     def endswith(self, value):
@@ -487,7 +487,7 @@ class String(Field):
         Args:
             value (str): String that a field's value should end with
         """
-        return query.Wildcard(self.name, '*{}'.format(value))
+        return queries.Wildcard(self.name, '*{}'.format(value))
 
 
 class Date(Field, RangeMixin, AggregationMixin):

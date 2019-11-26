@@ -6,7 +6,7 @@ from elasticsearch.helpers import scan
 from .config import config
 from .exceptions import BadOperatorError, MissingQueryError
 from .orm import OrmMixin
-from .query import Bool, Query, Script
+from .queries import Bool, Query, Script
 
 
 class DataFrame(OrmMixin):

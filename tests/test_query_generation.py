@@ -3,7 +3,7 @@ from datetime import date, timedelta
 import pytest
 
 from bamboo import BadOperatorError, boost
-from bamboo.query import Bool, Term
+from bamboo.queries import Bool, Term
 
 
 @pytest.fixture(params=[True, False])

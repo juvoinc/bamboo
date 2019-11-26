@@ -1,6 +1,6 @@
 import pytest
 
-from bamboo.field import Field, Namespace
+from bamboo.fields import Field, Namespace
 
 
 def test_dtypes(df):
