@@ -1,4 +1,4 @@
-"""ElasticDataFrame exceptions."""
+"""Bamboo exceptions."""
 
 
 class FieldConflictError(Exception):

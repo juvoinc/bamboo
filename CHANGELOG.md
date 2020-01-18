@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.1]
+
+### Changed
+
+- Moved to Apache 2.0 license
+
+### Added
+
+- Option to install pandas
+
 ## [0.3.0]
 
 ### Added

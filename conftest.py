@@ -105,7 +105,7 @@ def test_id():
 
 @pytest.fixture
 def df(monkeypatch):
-    """Init ElasticDataFrame using text index."""
+    """Init DataFrame using text index."""
     monkeypatch.setattr(DataFrame, '__repr__', lambda self: 'DataFrame')
     return DataFrame(TEST_INDEX)
 
