@@ -451,19 +451,3 @@ cat = df[df.is_cat == True]
  {'key': 10.0, 'value': 15},
  {'key': 15.0, 'value': 5}]
 ```
-
-## Development
-
-### Test code
-
-```shell
-$ python setup.py test
-...
-```
-
-### Lint code
-
-```shell
-$ python seutp.py lint
-...
-```
