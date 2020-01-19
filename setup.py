@@ -19,7 +19,8 @@ setup(
     keywords=['elasticsearch', 'dataframe', 'pandas'],
     python_requires='>=2.7',
     install_requires=[
-        'elasticsearch>=6.0.0'
+        'elasticsearch>=6.0.0',
+        'six'  # temp py2 support
     ],
     classifiers=[
         'Development Status :: 5 - Production/Stable',
@@ -36,7 +37,8 @@ setup(
             'coverage',
             'flake8',
             'flake8-docstrings',
-            'pytest'
+            'pytest',
+            'tox'
         ],
         test=[
             'pandas',
