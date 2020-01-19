@@ -1,3 +1,6 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this file,
+# You can obtain one at http://mozilla.org/MPL/2.0/.
 """Install bamboo package."""
 from setuptools import setup
 
@@ -7,7 +10,7 @@ setup(
     name='bamboo',
     packages=['bamboo'],
     version=VERSION,
-    license='Apache License, Version 2.0',
+    license='Mozilla Public License 2.0 (MPL 2.0)',
     description='DataFrame interface for ElasticSearch',
     author='Aaron Mangum',
     author_email='aaron.mangum@juvo.com',
@@ -21,8 +24,10 @@ setup(
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Developers',
-        'Topic :: Software Development :: Build Tools',
-        'License :: OSI Approved :: Apache Software License',
+        'License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)',
+        'Topic :: Software Development',
+        'Topic :: Utilities',
+        'Programming Language :: Python',
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
     ],

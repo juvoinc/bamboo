@@ -1,5 +1,7 @@
-"""
-ORM cixin class providing orm-like functionality for an index.
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this file,
+# You can obtain one at http://mozilla.org/MPL/2.0/.
+"""ORM mixin providing orm-like functionality for an index.
 
 Works with dynamic and static mappings.
 """
