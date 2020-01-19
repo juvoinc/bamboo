@@ -1820,6 +1820,9 @@ def test_or_filter_plus_conditions(df):
             'bool': {
                 'should': [
                     {
+                        'term': {'ns1.attr1': 5}
+                    },
+                    {
                         'bool': {
                             'filter': [
                                 {
@@ -1827,9 +1830,6 @@ def test_or_filter_plus_conditions(df):
                                 },
                             ]
                         }
-                    },
-                    {
-                        'term': {'ns1.attr1': 5}
                     },
                     {
                         'bool': {

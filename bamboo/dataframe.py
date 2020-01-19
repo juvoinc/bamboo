@@ -4,6 +4,8 @@
 """Pandas-style framework for interacting with elasticsearch."""
 from copy import deepcopy
 
+from six import string_types
+
 from elasticsearch.helpers import scan
 
 from .config import config
@@ -69,7 +71,7 @@ class DataFrame(OrmMixin):
             pass
 
     def __getitem__(self, item):
-        if isinstance(item, basestring):
+        if isinstance(item, string_types):
             return getattr(self, item)
         if isinstance(item, Query):
             new = deepcopy(self)
@@ -161,7 +163,7 @@ class DataFrame(OrmMixin):
         new = deepcopy(self)
         if any(isinstance(i, DataFrame) for i in conditions):
             raise TypeError(DataFrame)
-        new._query = Bool(filter=conditions) + new._query
+        new._query += Bool(filter=conditions)
         return new
 
     @property

@@ -393,6 +393,7 @@ class Bool(Query):
         for k, v in other.params.items():
             params[k].extend(v)
         return Bool(**params)
+    __radd__ = __add__
 
     def __and__(self, other):
         if not isinstance(other, Bool):
