@@ -7,7 +7,7 @@ from setuptools import setup
 VERSION = '0.3.2'
 
 setup(
-    name='bamboo',
+    name='elasticsearch-bamboo',
     packages=['bamboo'],
     version=VERSION,
     license='Mozilla Public License 2.0 (MPL 2.0)',
