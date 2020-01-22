@@ -39,4 +39,4 @@ __all__ = [
     'MissingMappingError',
     'MissingQueryError'
 ]
-__version__ = pkg_resources.get_distribution('bamboo').version
+__version__ = pkg_resources.get_distribution('elasticsearch-bamboo').version
