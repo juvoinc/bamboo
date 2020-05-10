@@ -159,7 +159,7 @@ Autocomplete works for field names. You can type period then tab (or whatever ke
 
 ```python
 >>> df = df[df.age > 21]
->>> df = df[df.is_cat == True]  # us `==`, not `is`
+>>> df = df[df.is_cat == True]  # use `==`, not `is`
 >>> df = df[df.account.status == 'good']
 >>> df.take(10)
 [{...}]
@@ -275,7 +275,7 @@ One more method that is supported by all data types is `.isin`. You can use this
 >>> df[df.name.regexp(r'.*?\s+the\s+cat')]
 
 # query where a term is a member of a set of values
->>> df[df.name.isin(['bengal', 'tabby', 'maine coon'])
+>>> df[df.name.isin(['bengal', 'tabby', 'maine coon'])]
 ```
 
 #### Scripted queries (using painless)
